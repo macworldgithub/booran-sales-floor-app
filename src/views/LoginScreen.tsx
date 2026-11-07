@@ -11,7 +11,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Lock, Eye, EyeOff, Server, AlertCircle, Sparkles } from 'lucide-react-native';
+import { Lock, Eye, EyeOff, Server, AlertCircle } from 'lucide-react-native';
 import { BooranLogo } from '../components/common/BooranLogo';
 import { colors, shadows } from '../theme/theme';
 import { useAuth } from '../context/AuthContext';
@@ -45,11 +45,6 @@ export function LoginScreen({ onOpenSettings }: LoginScreenProps) {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const fillQuickAccount = (quickEmail: string) => {
-    setEmail(quickEmail);
-    setPassword('123456');
   };
 
   const displayError = localError || authError;
@@ -122,10 +117,13 @@ export function LoginScreen({ onOpenSettings }: LoginScreenProps) {
                   placeholderTextColor="#94a3b8"
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
+                  autoComplete="current-password"
                 />
                 <TouchableOpacity
                   onPress={() => setShowPassword(!showPassword)}
                   style={styles.eyeBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? (
                     <EyeOff size={18} color="#94a3b8" />
@@ -148,28 +146,6 @@ export function LoginScreen({ onOpenSettings }: LoginScreenProps) {
                 <Text style={styles.submitButtonText}>Sign In</Text>
               )}
             </TouchableOpacity>
-
-            {/* Quick-fill Demo Accounts */}
-            <View style={styles.quickAccountsSection}>
-              <Text style={styles.quickAccountsLabel}>QUICK DEMO SIGN-IN</Text>
-              <View style={styles.quickButtonsRow}>
-                <TouchableOpacity
-                  onPress={() => fillQuickAccount('devs@omnisuiteai.com')}
-                  style={styles.quickAccountBtn}
-                >
-                  <Text style={styles.quickAccountRole}>Super Admin</Text>
-                  <Text style={styles.quickAccountEmail}>devs@omnisuiteai.com</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() => fillQuickAccount('southmorang@booran.com')}
-                  style={styles.quickAccountBtn}
-                >
-                  <Text style={styles.quickAccountRole}>South Morang Manager</Text>
-                  <Text style={styles.quickAccountEmail}>southmorang@booran.com</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
           </View>
         </View>
 
@@ -305,38 +281,6 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 14,
     fontWeight: '700',
-  },
-  quickAccountsSection: {
-    marginTop: 10,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
-  },
-  quickAccountsLabel: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: colors.textMuted,
-    letterSpacing: 0.5,
-    marginBottom: 8,
-  },
-  quickButtonsRow: {
-    gap: 8,
-  },
-  quickAccountBtn: {
-    padding: 8,
-    backgroundColor: '#f8fafc',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-  },
-  quickAccountRole: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  quickAccountEmail: {
-    fontSize: 10,
-    color: colors.textSecondary,
   },
   serverSettingsRow: {
     flexDirection: 'row',
