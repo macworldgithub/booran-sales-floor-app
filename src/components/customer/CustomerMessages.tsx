@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,10 +7,16 @@ import {
   ScrollView,
   StyleSheet,
   ActivityIndicator,
+  AppState,
+  Linking,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { Send, MessageSquare, AlertCircle, RefreshCw, Paperclip } from 'lucide-react-native';
-import { Lead, CustomerMessage } from '../../types';
+import { Lead, CustomerMessage, CustomerMedia } from '../../types';
 import { customerMessageApi } from '../../services/api';
+import { uploadMedia } from '../../services/media';
+import { Pagination } from '../common/Pagination';
+import { WorkflowButton, workflowStyles } from '../common/WorkflowControls';
 import { colors } from '../../theme/theme';
 
 interface CustomerMessagesProps {
@@ -25,47 +31,98 @@ export function CustomerMessages({ lead, disabled = false }: CustomerMessagesPro
   const [messageText, setMessageText] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [smsAvailable, setSmsAvailable] = useState(true);
+  const [mediaAvailable, setMediaAvailable] = useState(false);
+  const [attachments, setAttachments] = useState<CustomerMedia[]>([]);
+  const [isUploading, setUploading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [warning, setWarning] = useState('');
+  const [aiEnabled, setAiEnabled] = useState(Boolean(lead.ai_enabled));
+  const [resumeHours, setResumeHours] = useState(lead.ai_resume_hours || 0);
+  const [drafting, setDrafting] = useState(false);
+  const [confirmingSend, setConfirmingSend] = useState(false);
+  const attempt = useRef<{ body: string; media_ids: string[]; request_id: string } | null>(null);
+  const loadVersion = useRef(0);
 
   const phone = lead.phone || lead.customer_phone || '';
 
-  const loadHistory = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
+  const loadHistory = useCallback(async (background = false) => {
+    const version = ++loadVersion.current;
+    if (!background) setIsLoading(true);
     try {
-      const res = await customerMessageApi.history(lead._id);
+      const res = await customerMessageApi.history(lead._id, page);
+      if (version !== loadVersion.current) return;
       if (res.success && res.data) {
         setMessages(res.data.messages || []);
         setSmsAvailable(res.data.sms_available ?? true);
+        setMediaAvailable(res.data.media_available);
+        setAiEnabled(Boolean(res.data.ai_enabled));
+        setResumeHours(res.data.ai_resume_hours || 0);
+        setWarning(res.data.history_warning || '');
+        setPages(Math.max(1, res.pagination?.totalPages ?? 1));
+        setTotal(res.pagination?.total ?? res.data.messages.length);
       }
     } catch (err: any) {
-      setError(err?.message || 'Unable to load message history.');
+      if (version === loadVersion.current) setWarning(err?.message || 'Unable to load message history.');
     } finally {
-      setIsLoading(false);
+      if (version === loadVersion.current) setIsLoading(false);
     }
-  }, [lead._id]);
+  }, [lead._id, page]);
 
   useEffect(() => {
     loadHistory();
+    const timer = setInterval(() => {
+      if (AppState.currentState === 'active') loadHistory(true);
+    }, 8000);
+    return () => { clearInterval(timer); loadVersion.current++; };
   }, [loadHistory]);
 
+  const chooseMedia = async () => {
+    if (isUploading || attempt.current) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images', 'videos'], quality: 0.8 });
+      if (!result.canceled) {
+        const media = await uploadMedia(lead._id, result.assets[0]);
+        setAttachments(previous => [...previous, media]);
+      }
+    } catch (reason) {
+      setError((reason as Error).message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleSend = async () => {
-    if (!messageText.trim() || isSending || !phone) return;
+    if ((!messageText.trim() && !attachments.length) || isSending || isUploading || !phone) return;
     setIsSending(true);
     setError(null);
     try {
-      const requestId = `req_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-      const res = await customerMessageApi.send(lead._id, {
-        body: messageText.trim(),
-        media_ids: [],
-        request_id: requestId,
+      const requestId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, char => {
+        const nibble = Math.floor(Math.random() * 16);
+        return (char === 'x' ? nibble : (nibble & 3) | 8).toString(16);
       });
+      attempt.current ??= {
+        body: messageText.trim(),
+        media_ids: attachments.map(media => media.id),
+        request_id: requestId,
+      };
+      const res = await customerMessageApi.send(lead._id, attempt.current);
       if (res.success && res.data) {
-        setMessages((prev) => [...prev, res.data!]);
+        attempt.current = null;
+        setConfirmingSend(false);
+        if (['unknown', 'failed'].includes(res.data.status)) setError(res.data.error || 'The provider could not confirm delivery.');
         setMessageText('');
+        setAttachments([]);
+        if (page === 1) await loadHistory(true); else setPage(1);
       } else {
         throw new Error(res.error || 'Failed to send SMS.');
       }
     } catch (err: any) {
+      if ([400, 403, 404, 409].includes(err?.status)) attempt.current = null;
+      setConfirmingSend(Boolean(attempt.current));
       setError(err?.message || 'Unable to send SMS.');
     } finally {
       setIsSending(false);
@@ -86,6 +143,16 @@ export function CustomerMessages({ lead, disabled = false }: CustomerMessagesPro
         return { text: status, color: '#d97706', bg: '#fef3c7' };
     }
   };
+  const latestInbound = page === 1 ? messages.find(item => item.direction === 'inbound') : undefined;
+  const setDraftPolicy = async (enabled: boolean, hours = 0) => {
+    setDrafting(true); setError(null);
+    try {
+      const result = await customerMessageApi.setAi(lead._id, enabled, hours);
+      setAiEnabled(Boolean(result.data?.enabled));
+      setResumeHours(result.data?.resumeHours || 0);
+    } catch (reason) { setError((reason as Error).message); }
+    finally { setDrafting(false); }
+  };
 
   return (
     <View style={styles.container}>
@@ -94,7 +161,7 @@ export function CustomerMessages({ lead, disabled = false }: CustomerMessagesPro
           <MessageSquare size={16} color={colors.textPrimary} />
           <Text style={styles.headerTitle}>Customer SMS Timeline</Text>
         </View>
-        <TouchableOpacity onPress={loadHistory} disabled={isLoading} style={styles.refreshButton}>
+        <TouchableOpacity onPress={() => loadHistory()} disabled={isLoading} style={styles.refreshButton}>
           <RefreshCw size={14} color={colors.textSecondary} />
         </TouchableOpacity>
       </View>
@@ -109,11 +176,6 @@ export function CustomerMessages({ lead, disabled = false }: CustomerMessagesPro
           <View style={styles.centerContainer}>
             <ActivityIndicator size="small" color={colors.signalRed} />
             <Text style={styles.statusText}>Loading messages...</Text>
-          </View>
-        ) : error ? (
-          <View style={styles.errorBox}>
-            <AlertCircle size={14} color={colors.danger} />
-            <Text style={styles.errorBoxText}>{error}</Text>
           </View>
         ) : messages.length === 0 ? (
           <View style={styles.centerContainer}>
@@ -149,6 +211,11 @@ export function CustomerMessages({ lead, disabled = false }: CustomerMessagesPro
                   >
                     {msg.body}
                   </Text>
+                  {msg.attachments?.map(media => (
+                    <TouchableOpacity key={media.id} onPress={() => Linking.openURL(media.url).catch(() => setError('Unable to open the attachment.'))}>
+                      <Text style={isOutbound ? styles.bodyOutbound : styles.bodyInbound}>{media.name} ↗</Text>
+                    </TouchableOpacity>
+                  ))}
 
                   <View style={styles.messageMeta}>
                     <Text
@@ -175,10 +242,39 @@ export function CustomerMessages({ lead, disabled = false }: CustomerMessagesPro
           })
         )}
       </ScrollView>
+      {pages > 1 && <Pagination currentPage={page} totalPages={pages} totalItems={total} pageSize={20} onPageChange={setPage} />}
+      {(error || warning) && <View style={styles.errorBox}>
+        <AlertCircle size={14} color={colors.danger} />
+        <Text style={styles.errorBoxText}>{error || warning}</Text>
+      </View>}
+      {attachments.map(media => (
+        <TouchableOpacity key={media.id} disabled={isSending || confirmingSend} onPress={() => setAttachments(items => items.filter(item => item.id !== media.id))}>
+          <Text style={styles.statusText}>{media.name} · Remove</Text>
+        </TouchableOpacity>
+      ))}
+      <View style={[workflowStyles.row, { paddingHorizontal: 10, paddingVertical: 6 }]}>
+        <WorkflowButton label={aiEnabled || resumeHours ? 'Pause AI drafts' : 'Enable AI drafts'} disabled={isSending || drafting || confirmingSend}
+          onPress={() => setDraftPolicy(!(aiEnabled || resumeHours))} />
+        {aiEnabled && <WorkflowButton label={resumeHours ? 'Keep drafts paused after staff reply' : 'Resume drafts 24h after staff reply'}
+          disabled={isSending || drafting || confirmingSend} onPress={() => setDraftPolicy(true, resumeHours ? 0 : 24)} />}
+        {!aiEnabled && !!resumeHours && <Text style={workflowStyles.text}>Staff takeover. Drafting will resume after the inactivity period.</Text>}
+        {aiEnabled && <WorkflowButton label="Draft reply for review" disabled={isSending || drafting || !latestInbound || confirmingSend || !!messageText} onPress={async () => {
+          if (!latestInbound) return;
+          setDrafting(true); setError(null);
+          try {
+            const result = await customerMessageApi.draft(lead._id, latestInbound.body.slice(0, 1000));
+            if (result.data) setMessageText(result.data.draft);
+          } catch (reason) { setError((reason as Error).message); }
+          finally { setDrafting(false); }
+        }} />}
+      </View>
 
       {/* Composer Input */}
       {phone ? (
         <View style={styles.composer}>
+          {mediaAvailable && <TouchableOpacity accessibilityLabel="Attach photo or video" disabled={disabled || isUploading || isSending || attachments.length >= 5 || confirmingSend} onPress={chooseMedia}>
+            {isUploading ? <ActivityIndicator /> : <Paperclip size={18} color={colors.textSecondary} />}
+          </TouchableOpacity>}
           <TextInput
             style={styles.composerInput}
             value={messageText}
@@ -187,14 +283,15 @@ export function CustomerMessages({ lead, disabled = false }: CustomerMessagesPro
             placeholderTextColor="#94a3b8"
             multiline
             maxLength={600}
-            editable={!disabled && smsAvailable}
+            editable={!disabled && smsAvailable && !isSending && !drafting && !confirmingSend}
           />
           <TouchableOpacity
             onPress={handleSend}
-            disabled={!messageText.trim() || isSending || disabled || !smsAvailable}
+            accessibilityLabel={confirmingSend ? 'Check send result' : 'Send SMS'}
+            disabled={(!messageText.trim() && !attachments.length) || isUploading || isSending || disabled || !smsAvailable}
             style={[
               styles.sendButton,
-              (!messageText.trim() || isSending || disabled || !smsAvailable) && styles.sendButtonDisabled,
+              ((!messageText.trim() && !attachments.length) || isUploading || isSending || disabled || !smsAvailable) && styles.sendButtonDisabled,
             ]}
           >
             {isSending ? (

@@ -28,6 +28,8 @@ import { Lead } from '../../types';
 import { leadApi } from '../../services/api';
 import { CustomerPhoneEditor } from '../customer/CustomerPhoneEditor';
 import { CustomerMessages } from '../customer/CustomerMessages';
+import { LeadAssignment } from '../customer/LeadAssignment';
+import { CustomerWorkflows } from '../customer/CustomerWorkflows';
 import { colors, shadows } from '../../theme/theme';
 import { useAuth } from '../../context/AuthContext';
 
@@ -38,6 +40,7 @@ interface Customer360ModalProps {
   onLeadUpdated?: (updatedLead: Lead) => void;
   onOpenBookDrive?: (lead: Lead) => void;
   onShowToast?: (msg: string, type?: 'success' | 'error') => void;
+  onOpenRelated?: (lead: Lead) => void;
 }
 
 export function Customer360Modal({
@@ -47,6 +50,7 @@ export function Customer360Modal({
   onLeadUpdated,
   onOpenBookDrive,
   onShowToast,
+  onOpenRelated,
 }: Customer360ModalProps) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
@@ -55,6 +59,7 @@ export function Customer360Modal({
   const [isSubmittingNote, setIsSubmittingNote] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [drawing, setDrawing] = useState(false);
 
   if (!isOpen || !lead) return null;
 
@@ -147,7 +152,7 @@ export function Customer360Modal({
             </View>
           )}
 
-          <ScrollView style={styles.sheetBody} showsVerticalScrollIndicator={false}>
+          <ScrollView style={styles.sheetBody} showsVerticalScrollIndicator={false} scrollEnabled={!drawing} keyboardShouldPersistTaps="handled">
             {/* Status Selector */}
             <View style={styles.sectionCard}>
               <Text style={styles.sectionTitle}>Pipeline Stage</Text>
@@ -213,11 +218,14 @@ export function Customer360Modal({
                 </View>
               </View>
 
+              {user?.canAllocate && <LeadAssignment key={lead._id} lead={lead} onUpdated={updated => onLeadUpdated?.(updated)} />}
+              {!!lead.business_name && <Text style={styles.metaValue}>{lead.business_name}</Text>}
               {lead.source && (
                 <View style={styles.sourceTag}>
-                  <Text style={styles.sourceText}>Source: {lead.source}</Text>
+                  <Text style={styles.sourceText}>{[lead.source, lead.source_channel, lead.source_stage].filter(Boolean).join(' · ')}</Text>
                 </View>
               )}
+              {!!lead.source_comments && <Text style={styles.metaValue}>{lead.source_comments}</Text>}
             </View>
 
             {/* Test Drive Action Card */}
@@ -263,7 +271,9 @@ export function Customer360Modal({
             )}
 
             {/* Customer SMS Communications */}
-            <CustomerMessages lead={lead} />
+            <CustomerMessages key={lead._id} lead={lead} />
+            <CustomerWorkflows key={`workflows-${lead._id}`} lead={lead}
+              onUpdate={updated => onLeadUpdated?.(updated)} onOpenLead={related => onOpenRelated?.(related)} onDrawing={setDrawing} />
 
             {/* Diary Entries & Notes Timeline */}
             <View style={styles.sectionCard}>

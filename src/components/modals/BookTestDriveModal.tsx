@@ -51,7 +51,7 @@ export function BookTestDriveModal({
         ? defaultDealership
         : selectedRooftop !== 'All Locations'
         ? selectedRooftop
-        : locations[0] || 'BYD South Morang')
+        : locations[0] || '')
   );
 
   const [appointmentType, setAppointmentType] = useState<Appointment['type']>('Test Drive');
@@ -73,6 +73,8 @@ export function BookTestDriveModal({
     'Showroom Visit',
     'Delivery Handover',
     'Callback',
+    'Walk-in',
+    'Lunch',
   ];
 
   const handleSubmit = async () => {
@@ -200,7 +202,7 @@ export function BookTestDriveModal({
                 style={styles.textInput}
                 value={vehicle}
                 onChangeText={setVehicle}
-                placeholder="e.g. 2024 BYD Seal Premium"
+                placeholder="e.g. 2026 Kia Sportage"
                 placeholderTextColor="#94a3b8"
               />
             </View>

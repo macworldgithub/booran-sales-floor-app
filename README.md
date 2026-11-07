@@ -13,7 +13,7 @@ React Native / Expo mobile application for the Booran Motors Sales Floor OS, rep
 
 2. **Floor Operations**
    - **Today Command Center**: Real-time synchronization metrics across `flwup_crm` and `booran_inventory_tracker`, KPI cards, urgent follow-up leads, and high-priority holding cost vehicles.
-   - **Leads Centre (CRM)**: Server-paginated prospects list, search, status filters (New Lead, Following Up, Sold, Lost), customer contact SLA times, direct Call/Email actions, and test drive booking.
+   - **Leads Centre (CRM)**: FLWUP and Nextgate in one server-paginated queue with source, status, channel, owner and assignment filters. Managers allocate leads to active users at the same dealership.
    - **Live Inventory**: Stock units with photos, advertised price, vehicle cost, potential gross, daily holding cost rate, accumulated holding cost, days in stock badges (with 90+ days warnings), and soft hold indicators.
    - **Showroom Floor (Calendar)**: Day-by-day appointment timeline (Test Drives, Showroom Visits, Delivery Handovers, Callbacks) with quick booking modal.
 
@@ -25,11 +25,12 @@ React Native / Expo mobile application for the Booran Motors Sales Floor OS, rep
 
 4. **Interactive Modals & Customer360**
    - **Customer360 Profile**: Lead timeline, stage management, inline mobile number editor, diary notes history with staff signatures, and two-way SMS messaging with delivery status badges.
-   - **Vehicle Detail Modal**: Comprehensive specs, financial breakdown, frontline readiness, website listing toggle, and 48h soft hold placement & release.
+   - **Vehicle Detail Modal**: Vehicle specs, frontline readiness, role-scoped financial figures, pending deal status and release of legacy holds.
    - **Book Appointment / Test Drive**: Custom scheduler with consultant and vehicle selection.
    - **Add Prospect Modal**: Fast floor walk-in intake with trade-in appraisal capture.
    - **Notification Center**: System alerts, unread leads, and aging stock warnings.
    - **Unified Live Search**: Global debounced search spanning Leads, Stock Vehicles, and Capital Radar.
+   - **Phase 2 Workflows**: PULSE and staff activity, business contacts and duplicate merges, private inspection photos and loan-car signatures, Rego and PPSR, deal registration, and delivery bookings with accessory coordination and on-site proof.
 
 ---
 
@@ -63,7 +64,11 @@ npm run web
 The mobile app includes a built-in **API Settings** modal accessible from the sign-in screen or the mobile drawer:
 - **iOS Simulator**: `http://localhost:5001/api`
 - **Android Emulator**: `http://10.0.2.2:5001/api`
-- **Production Vercel**: `https://booran-sales-floor-backend.vercel.app/api`
+- **Production VPS**: `https://booran-sales-floor-backend.goodshowroom.com/api`
+
+Set `EXPO_PUBLIC_BOORAN_API_URL` at build time to point a release at another backend. If an existing installation uses a saved API URL, select the VPS URL in API Settings when switching deployments.
+
+Rebuild the native clients after adding the camera, filesystem, geolocation and notification modules. On iOS, install updated CocoaPods on macOS before building. To enable remote alerts, configure APNs and FCM credentials for the app’s EAS project and set `EXPO_PUBLIC_EAS_PROJECT_ID` at build time. Enable alerts from the in-app Notification Centre on a real device.
 
 ### Validation & Quality
 
@@ -73,6 +78,8 @@ npm run typecheck
 
 # Run test suite
 npm test
+
+npm run lint
 ```
 
 ---

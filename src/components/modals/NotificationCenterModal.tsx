@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -17,23 +17,60 @@ import {
   ChevronRight,
   CheckCircle2,
 } from 'lucide-react-native';
-import { UnifiedSummary } from '../../types';
+import { Lead, UnifiedSummary } from '../../types';
 import { colors, shadows } from '../../theme/theme';
+import { useAuth } from '../../context/AuthContext';
+import { fetchApi, leadApi } from '../../services/api';
+import { disablePush, enablePush, readPushRegistration } from '../../services/devicePush';
+import { WorkflowButton, workflowStyles } from '../common/WorkflowControls';
 
 interface NotificationCenterModalProps {
   isOpen: boolean;
   onClose: () => void;
   summary: UnifiedSummary | null;
   onNavigateTab: (tab: string) => void;
+  onOpenLead: (lead: Lead) => void;
 }
+
+const categories = [['high_buyer', 'High buyer'], ['price_objection', 'Price objection'], ['high_risk', 'High risk']];
 
 export function NotificationCenterModal({
   isOpen,
   onClose,
   summary,
   onNavigateTab,
+  onOpenLead,
 }: NotificationCenterModalProps) {
   const insets = useSafeAreaInsets();
+  const { selectedRooftop, user } = useAuth();
+  const [alerts, setAlerts] = useState<{ _id: string; title: string; dealership: string; lead_id: string; createdAt: string }[]>([]);
+  const [enabled, setEnabled] = useState<string[] | null>(null);
+  const [push, setPush] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const site = selectedRooftop !== 'All Locations' && user?.canAllocate ? selectedRooftop : '';
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let active = true;
+    setEnabled(null); setAlerts([]); setError('');
+    const load = () => fetchApi<typeof alerts>(`/lead-alerts?limit=20&rooftop=${encodeURIComponent(selectedRooftop)}`).then(result => {
+      if (active) setAlerts(result.data || []);
+    }).catch(reason => { if (active) setError(reason.message); });
+    void load();
+    void readPushRegistration().then(token => { if (active) setPush(Boolean(token)); }).catch(() => {});
+    if (site) fetchApi<{ enabled: string[] }>(`/lead-alerts/settings?rooftop=${encodeURIComponent(site)}`).then(result => {
+      if (active) setEnabled(result.data?.enabled || []);
+    }).catch(reason => { if (active) setError(reason.message); });
+    const timer = setInterval(load, 10000);
+    return () => { active = false; clearInterval(timer); };
+  }, [isOpen, selectedRooftop, site]);
+
+  const run = async (action: () => Promise<void>) => {
+    setBusy(true); setError('');
+    try { await action(); } catch (reason) { setError((reason as Error).message); }
+    finally { setBusy(false); }
+  };
 
   if (!isOpen) return null;
 
@@ -75,6 +112,26 @@ export function NotificationCenterModal({
           </View>
 
           <ScrollView style={styles.contentScroll} showsVerticalScrollIndicator={false}>
+            <View style={workflowStyles.card}>
+              <Text style={workflowStyles.title}>Lead activity</Text>
+              <WorkflowButton label={push ? 'Disable push alerts on this device' : 'Enable push alerts on this device'} disabled={busy} onPress={() => run(async () => {
+                if (push) await disablePush(); else await enablePush();
+                setPush(!push);
+              })} />
+              {enabled && <View style={workflowStyles.row}>
+                {categories.map(([id, label]) => <WorkflowButton key={id} label={`${label} ${enabled.includes(id) ? 'on' : 'off'}`} disabled={busy} onPress={() => run(async () => {
+                  const next = enabled.includes(id) ? enabled.filter(item => item !== id) : [...enabled, id];
+                  await fetchApi('/lead-alerts/settings', { method: 'PATCH', body: JSON.stringify({ dealership: site, enabled: next }) });
+                  setEnabled(next);
+                })} />)}
+              </View>}
+              {alerts.map(alert => <WorkflowButton key={alert._id} label={`${alert.title} · ${alert.dealership}`} disabled={busy} onPress={() => run(async () => {
+                const result = await leadApi.getLead(alert.lead_id);
+                if (result.data) { onClose(); onOpenLead(result.data); }
+              })} />)}
+              {!alerts.length && <Text style={workflowStyles.text}>No high-signal alerts in this view.</Text>}
+              {!!error && <Text accessibilityRole="alert" style={workflowStyles.error}>{error}</Text>}
+            </View>
             {/* New Leads Notification */}
             {newLeads > 0 && (
               <TouchableOpacity

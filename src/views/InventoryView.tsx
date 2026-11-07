@@ -32,7 +32,7 @@ interface InventoryViewProps {
 }
 
 export function InventoryView({ onSelectVehicle }: InventoryViewProps) {
-  const { selectedRooftop } = useAuth();
+  const { selectedRooftop, user } = useAuth();
 
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [totalVehicles, setTotalVehicles] = useState(0);
@@ -42,6 +42,8 @@ export function InventoryView({ onSelectVehicle }: InventoryViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [agingFilter, setAgingFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [bucketCounts, setBucketCounts] = useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,8 +51,7 @@ export function InventoryView({ onSelectVehicle }: InventoryViewProps) {
   const agingOptions = [
     { id: 'all', label: 'All Aging' },
     { id: '0-30', label: '0–30d' },
-    { id: '31-45', label: '31–45d' },
-    { id: '46-60', label: '46–60d' },
+    { id: '31-60', label: '31–60d' },
     { id: '61-90', label: '61–90d' },
     { id: '90+', label: '90+ Days', highlight: true },
   ];
@@ -62,6 +63,7 @@ export function InventoryView({ onSelectVehicle }: InventoryViewProps) {
       const params: Record<string, string | number> = {
         page: currentPage,
         limit: pageSize,
+        status: statusFilter,
       };
 
       if (selectedRooftop !== 'All Locations') {
@@ -95,11 +97,20 @@ export function InventoryView({ onSelectVehicle }: InventoryViewProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage, pageSize, selectedRooftop, categoryFilter, agingFilter, searchQuery]);
+  }, [currentPage, pageSize, selectedRooftop, categoryFilter, agingFilter, searchQuery, statusFilter]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedRooftop, categoryFilter, agingFilter, searchQuery]);
+  }, [selectedRooftop, categoryFilter, agingFilter, searchQuery, statusFilter]);
+
+  useEffect(() => {
+    let active = true;
+    setBucketCounts({});
+    inventoryApi.getInventoryStats(selectedRooftop).then(result => {
+      if (active) setBucketCounts(result.data?.agingBuckets || {});
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [selectedRooftop]);
 
   useEffect(() => {
     fetchVehicles();
@@ -174,11 +185,22 @@ export function InventoryView({ onSelectVehicle }: InventoryViewProps) {
                     opt.highlight && !isSelected && { color: colors.danger, fontWeight: '700' },
                   ]}
                 >
-                  {opt.label}
+                  {opt.label}{bucketCounts[opt.id] === undefined ? '' : ` · ${bucketCounts[opt.id]}`}
                 </Text>
               </TouchableOpacity>
             );
           })}
+        </ScrollView>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtersRow}>
+          {[
+            ['', selectedRooftop === 'All Locations' ? 'In stock by default' : 'All statuses'],
+            ['Deal Pending', 'Deal pending'],
+            ['Sold', 'Sold'],
+            ['all', 'All stock statuses'],
+          ].map(([value, label]) => <TouchableOpacity key={value} onPress={() => { setStatusFilter(value); setCurrentPage(1); }}
+            style={[styles.filterPill, statusFilter === value && styles.filterPillSelected]}>
+            <Text style={[styles.filterPillText, statusFilter === value && styles.filterPillTextSelected]}>{label}</Text>
+          </TouchableOpacity>)}
         </ScrollView>
       </View>
 
@@ -302,11 +324,11 @@ export function InventoryView({ onSelectVehicle }: InventoryViewProps) {
                   </View>
 
                   {/* Holding cost badge */}
-                  <View style={[styles.badge, { backgroundColor: '#fef3c7' }]}>
+                  {user?.viewCost && <View style={[styles.badge, { backgroundColor: '#fef3c7' }]}>
                     <Text style={[styles.badgeText, { color: '#b45309' }]}>
                       ${(v.accumulatedHoldingCost || (v.daysInStock * 25)).toLocaleString()} hold
                     </Text>
-                  </View>
+                  </View>}
                 </View>
 
                 {/* Soft Hold banner if held */}
@@ -314,7 +336,7 @@ export function InventoryView({ onSelectVehicle }: InventoryViewProps) {
                   <View style={styles.softHoldBanner}>
                     <Lock size={12} color={colors.amber} />
                     <Text style={styles.softHoldText}>
-                      Soft Hold: {v.softHold?.prospectName || 'Customer Reservation'}
+                      {v.softHold?.prospectName ? `Existing soft hold · ${v.softHold.prospectName}` : 'Existing soft hold'}
                     </Text>
                   </View>
                 )}

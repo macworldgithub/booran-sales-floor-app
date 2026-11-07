@@ -26,6 +26,8 @@ import { Lead, Vehicle, ActionItem, Appointment, UnifiedSummary } from '../types
 import { MetricCard } from '../components/common/MetricCard';
 import { colors, shadows } from '../theme/theme';
 import { useAuth } from '../context/AuthContext';
+import { PulseCard } from '../components/common/PulseCard';
+import { DeliveryCentre } from '../components/common/DeliveryCentre';
 
 interface TodayViewProps {
   leads: Lead[];
@@ -97,6 +99,8 @@ export function TodayView({
       }
       showsVerticalScrollIndicator={false}
     >
+      <PulseCard onOpenLead={onSelectLead} />
+      <DeliveryCentre onOpenLead={onSelectLead} />
       {/* Executive Command Banner */}
       <LinearGradient
         colors={['#171b22', '#232b38', '#12161c']}
@@ -183,7 +187,7 @@ export function TodayView({
         <View style={styles.sectionHeader}>
           <View style={styles.sectionHeaderLeft}>
             <Calendar size={16} color={colors.textPrimary} />
-            <Text style={styles.sectionTitle}>Today's Appointments</Text>
+            <Text style={styles.sectionTitle}>Today’s Appointments</Text>
           </View>
           <TouchableOpacity onPress={() => onNavigateTab('calendar')}>
             <Text style={styles.viewAllLink}>View All</Text>

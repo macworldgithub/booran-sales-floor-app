@@ -24,6 +24,8 @@ export interface CustomerMessage {
 export interface CustomerMessageHistory {
   messages: CustomerMessage[];
   sms_available: boolean;
+  ai_enabled?: boolean;
+  ai_resume_hours?: number;
   media_available: boolean;
   media_unavailable_reason?: string;
   history_warning?: string;
@@ -46,6 +48,14 @@ export interface Lead {
   dealership_name?: string;
   dealer_code?: string;
   owner_name?: string;
+  owner_id?: string | null;
+  business_name?: string;
+  business_id?: string;
+  source_channel?: string;
+  source_stage?: string;
+  source_comments?: string;
+  ai_enabled?: boolean;
+  ai_resume_hours?: number;
   assignedTo?: string;
   phone?: string;
   customer_phone?: string;
@@ -71,6 +81,7 @@ export interface Lead {
     model?: string;
     year?: number;
     rego?: string;
+    vin?: string;
     estimatedValue?: number;
   };
   diary_entries?: {
@@ -196,7 +207,7 @@ export interface Appointment {
   prospectName: string;
   consultantName?: string;
   vehicle?: string;
-  type: 'Test Drive' | 'Showroom Visit' | 'Delivery Handover' | 'Callback';
+  type: 'Test Drive' | 'Showroom Visit' | 'Delivery Handover' | 'Callback' | 'Walk-in' | 'Lunch';
   when: string;
   duration?: number;
   notes?: string;
@@ -241,7 +252,9 @@ export interface AuthUser {
   id: string;
   email: string;
   name: string;
-  role: 'principal' | 'manager' | 'consultant' | 'super_admin';
+  role: 'dealer_principal' | 'general_manager' | 'sales_manager' | 'manager' | 'sales_consultant' | 'super_admin' | 'contractor';
+  canAllocate?: boolean;
+  viewCost?: boolean;
   site: string;
   allowedSites: string[];
   avatar?: string;

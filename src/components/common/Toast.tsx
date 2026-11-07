@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Animated, Text, StyleSheet, View } from 'react-native';
 import { CheckCircle2, AlertCircle, Info } from 'lucide-react-native';
 import { colors } from '../../theme/theme';
@@ -11,8 +11,8 @@ interface ToastProps {
 }
 
 export function Toast({ message, type = 'success', onDismiss, duration = 3000 }: ToastProps) {
-  const opacity = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(20)).current;
+  const [opacity] = useState(() => new Animated.Value(0));
+  const [translateY] = useState(() => new Animated.Value(20));
 
   useEffect(() => {
     if (message) {

@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { AuthUser } from '../types';
+import { disablePush } from '../services/devicePush';
 import {
   authApi,
   leadApi,
@@ -8,6 +9,8 @@ import {
   setOnUnauthorized,
   setApiBaseUrl,
   getApiBaseUrl,
+  setSessionToken,
+  setStoredUser,
 } from '../services/api';
 
 interface AuthContextValue {
@@ -36,19 +39,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [locationsError, setLocationsError] = useState<string | null>(null);
   const [selectedRooftop, setSelectedRooftop] = useState<string>('All Locations');
   const [apiUrl, setApiUrlState] = useState<string>(getApiBaseUrl());
+  const locationsVersion = useRef(0);
 
   const handleUnauthorized = useCallback(() => {
+    locationsVersion.current++;
     setUser(null);
+    setLocations([]);
+    setSelectedRooftop('All Locations');
     setAuthError(null);
+    void Promise.all([setSessionToken(null), setStoredUser(null)]).catch(() => {});
   }, []);
 
   const fetchLocations = useCallback(async (currentUser: AuthUser) => {
+    const version = ++locationsVersion.current;
     setLocationsError(null);
     try {
       const [crmRes, invRes] = await Promise.allSettled([
         leadApi.getCrmRooftops(),
         inventoryApi.getInventoryRooftops(),
       ]);
+      if (version !== locationsVersion.current) return;
 
       const names: string[] = [];
       if (crmRes.status === 'fulfilled' && crmRes.value.success && crmRes.value.data) {
@@ -62,24 +72,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (unique.length > 0) {
         setLocations(unique);
       } else {
-        // Fallback default authorised dealerships for South Morang
-        if (currentUser.role === 'super_admin') {
-          setLocations([
-            'BYD South Morang',
-            'Chery South Morang',
-            'Dandenong Hyundai',
-            'Hyundai South Morang',
-            'Kia South Morang',
-            'Mornington Holden',
-          ]);
-        } else {
-          setLocations([
-            'BYD South Morang',
-            'Chery South Morang',
-            'Hyundai South Morang',
-            'Kia South Morang',
-          ]);
-        }
+        setLocations(currentUser.allowedSites.filter(site => !['*', 'All Locations', 'South Morang'].includes(site)));
+        if (crmRes.status === 'rejected' && invRes.status === 'rejected') setLocationsError('Unable to load dealership list.');
       }
     } catch (err: any) {
       console.warn('Locations load error:', err);
@@ -90,21 +84,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setOnUnauthorized(handleUnauthorized);
 
-    initApiService().then(async ({ url, token, user: storedUser }) => {
+    initApiService().then(async ({ url, token }) => {
       setApiUrlState(url);
-      if (storedUser) {
-        setUser(storedUser);
-        fetchLocations(storedUser);
-      }
       if (token) {
         try {
           const res = await authApi.me();
           if (res.success && res.data) {
             setUser(res.data);
-            fetchLocations(res.data);
+            await fetchLocations(res.data);
           }
         } catch {
-          // If offline or token expired, keep storedUser if available
+          setUser(null);
         }
       }
       setIsLoading(false);
@@ -140,12 +130,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     setIsLoading(true);
     try {
+      await disablePush().catch(() => {});
       await authApi.logout();
     } catch (err) {
       console.warn('Logout error:', err);
     } finally {
+      locationsVersion.current++;
       setUser(null);
       setLocations([]);
+      setSelectedRooftop('All Locations');
       setIsLoading(false);
     }
   };
@@ -157,6 +150,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateApiUrl = async (url: string) => {
+    if (url.trim().replace(/\/+$/, '') === getApiBaseUrl()) return;
+    if (user) await logout();
     await setApiBaseUrl(url);
     setApiUrlState(getApiBaseUrl());
   };

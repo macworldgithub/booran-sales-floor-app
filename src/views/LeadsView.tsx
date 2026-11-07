@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Linking,
+  AppState,
 } from 'react-native';
 import {
   Search,
@@ -32,14 +33,16 @@ interface LeadsViewProps {
   onSelectLead: (lead: Lead) => void;
   onOpenBookDrive: (lead?: Lead) => void;
   onOpenAddProspect: () => void;
+  revision?: number;
 }
 
 export function LeadsView({
   onSelectLead,
   onOpenBookDrive,
   onOpenAddProspect,
+  revision,
 }: LeadsViewProps) {
-  const { selectedRooftop } = useAuth();
+  const { selectedRooftop, user } = useAuth();
 
   const [leads, setLeads] = useState<Lead[]>([]);
   const [totalLeads, setTotalLeads] = useState(0);
@@ -48,8 +51,17 @@ export function LeadsView({
   const [pageSize] = useState(20);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [source, setSource] = useState('all');
+  const [assignment, setAssignment] = useState('all');
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [ownerText, setOwnerText] = useState('');
+  const [channelText, setChannelText] = useState('');
+  const [extra, setExtra] = useState({ owner: '', channel: '' });
+  const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const requestVersion = useRef(0);
+  const pending = useRef(false);
 
   const statusOptions = [
     { id: 'all', label: 'All Status' },
@@ -57,15 +69,24 @@ export function LeadsView({
     { id: 'following_up', label: 'Following Up', color: colors.amber },
     { id: 'sold', label: 'Sold', color: colors.emerald },
     { id: 'lost', label: 'Lost', color: colors.slate },
+    { id: 'returned', label: 'Returned', color: colors.slate },
   ];
 
-  const fetchLeads = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
+  const fetchLeads = useCallback(async (background = false) => {
+    if (background && pending.current) return;
+    const version = ++requestVersion.current;
+    pending.current = true;
+    if (!background) {
+      setIsLoading(true);
+      setError(null);
+    }
     try {
       const params: Record<string, string | number> = {
         page: currentPage,
         limit: pageSize,
+        source,
+        assignment,
+        ...extra,
       };
 
       if (selectedRooftop !== 'All Locations') {
@@ -74,12 +95,19 @@ export function LeadsView({
       if (statusFilter !== 'all') {
         params.status = statusFilter;
       }
-      if (searchQuery.trim()) {
-        params.search = searchQuery.trim();
+      if (search) {
+        params.search = search;
       }
 
       const res = await leadApi.getLeads(params);
+      if (version !== requestVersion.current) return;
       if (res.success && res.data) {
+        const lastPage = Math.max(1, res.pagination?.totalPages ?? 1);
+        if (currentPage > lastPage) {
+          setCurrentPage(lastPage);
+          return;
+        }
+        setError(null);
         setLeads(res.data);
         if (res.pagination) {
           setTotalLeads(res.pagination.total);
@@ -92,19 +120,40 @@ export function LeadsView({
         throw new Error(res.error || 'Failed to fetch leads.');
       }
     } catch (err: any) {
-      setError(err?.message || 'Unable to load leads.');
+      if (version === requestVersion.current && !background) setError(err?.message || 'Unable to load leads.');
     } finally {
-      setIsLoading(false);
+      if (version === requestVersion.current) {
+        pending.current = false;
+        setIsLoading(false);
+      }
     }
-  }, [currentPage, pageSize, selectedRooftop, statusFilter, searchQuery]);
+  }, [currentPage, pageSize, selectedRooftop, statusFilter, search, source, assignment, extra]);
+
+  useEffect(() => { setCurrentPage(1); setLeads([]); }, [selectedRooftop]);
 
   useEffect(() => {
-    setCurrentPage(1);
-  }, [selectedRooftop, statusFilter, searchQuery]);
+    const timer = setTimeout(() => {
+      setSearch(searchQuery.trim());
+      setCurrentPage(1);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   useEffect(() => {
     fetchLeads();
-  }, [fetchLeads]);
+    const resume = AppState.addEventListener('change', (state) => {
+      if (state === 'active') fetchLeads(true);
+    });
+    const timer = user?.canAllocate && currentPage === 1 && setInterval(() => {
+      if (AppState.currentState === 'active') fetchLeads(true);
+    }, 5000);
+    return () => {
+      requestVersion.current++;
+      pending.current = false;
+      resume.remove();
+      if (timer) clearInterval(timer);
+    };
+  }, [fetchLeads, currentPage, user?.canAllocate, revision]);
 
   const handleCall = (phone?: string) => {
     if (phone) {
@@ -124,7 +173,7 @@ export function LeadsView({
       <View style={styles.banner}>
         <View style={styles.bannerLeft}>
           <View style={styles.bannerTagRow}>
-            <Text style={styles.bannerTag}>FLWUP_CRM DATABASE</Text>
+            <Text style={styles.bannerTag}>BOORAN LEADS</Text>
             <View style={styles.countBadge}>
               <Text style={styles.countBadgeText}>{totalLeads.toLocaleString()} Records</Text>
             </View>
@@ -167,7 +216,7 @@ export function LeadsView({
           return (
             <TouchableOpacity
               key={opt.id}
-              onPress={() => setStatusFilter(opt.id)}
+              onPress={() => { setCurrentPage(1); setStatusFilter(opt.id); }}
               style={[
                 styles.filterPill,
                 isSelected && styles.filterPillSelected,
@@ -185,12 +234,37 @@ export function LeadsView({
           );
         })}
       </ScrollView>
+      <TouchableOpacity accessibilityRole="button" onPress={() => setFilterOpen(!filterOpen)} style={{ paddingHorizontal: 14, paddingVertical: 6 }}>
+        <Text style={styles.clearSearch}>{filterOpen ? 'Hide more filters' : 'More filters'}</Text>
+      </TouchableOpacity>
+      {filterOpen && <View style={{ paddingHorizontal: 14, gap: 5 }}>
+        <TextInput accessibilityLabel="Consultant name" placeholder="Consultant name (exact)" value={ownerText} onChangeText={setOwnerText} style={styles.searchInput} />
+        <TextInput accessibilityLabel="Nextgate channel" placeholder="Nextgate channel (exact)" value={channelText} onChangeText={setChannelText} style={styles.searchInput} />
+        <TouchableOpacity accessibilityRole="button" onPress={() => {
+          setExtra({ owner: ownerText.trim(), channel: channelText.trim() });
+          setCurrentPage(1);
+        }}><Text style={styles.clearSearch}>Apply filters</Text></TouchableOpacity>
+      </View>}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersScroll} contentContainerStyle={styles.filtersContent}>
+        {[['all', 'All sources'], ['Nextgate', 'Nextgate'], ['FLWUP Dashboard', 'FLWUP']].map(([value, label]) => (
+          <TouchableOpacity key={value} onPress={() => { setCurrentPage(1); setSource(value); }}
+            style={[styles.filterPill, source === value && styles.filterPillSelected]}>
+            <Text style={[styles.filterPillText, source === value && styles.filterPillTextSelected]}>{label}</Text>
+          </TouchableOpacity>
+        ))}
+        {user?.canAllocate && [['all', 'Any assignment'], ['unassigned', 'Unassigned'], ['assigned', 'Assigned']].map(([value, label]) => (
+          <TouchableOpacity key={`assignment-${value}`} onPress={() => { setCurrentPage(1); setAssignment(value); }}
+            style={[styles.filterPill, assignment === value && styles.filterPillSelected]}>
+            <Text style={[styles.filterPillText, assignment === value && styles.filterPillTextSelected]}>{label}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
 
       {/* Error state */}
       {error && (
         <View style={styles.errorBox}>
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity onPress={fetchLeads} style={styles.retryBtn}>
+          <TouchableOpacity onPress={() => fetchLeads()} style={styles.retryBtn}>
             <Text style={styles.retryText}>Retry</Text>
           </TouchableOpacity>
         </View>
@@ -247,7 +321,7 @@ export function LeadsView({
                         {lead.name || lead.customer_name}
                       </Text>
                       <Text style={styles.dealershipText} numberOfLines={1}>
-                        {lead.dealership}
+                        {[lead.dealership, lead.source, lead.source_channel].filter(Boolean).join(' · ')}
                       </Text>
                     </View>
                   </View>

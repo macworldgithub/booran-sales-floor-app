@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X, User, Phone, Mail, Car, AlertCircle, Plus } from 'lucide-react-native';
 import { Lead } from '../../types';
 import { leadApi } from '../../services/api';
+import { workflows } from '../../services/workflows';
+import { WorkflowButton, WorkflowField } from '../common/WorkflowControls';
 import { colors, shadows } from '../../theme/theme';
 import { useAuth } from '../../context/AuthContext';
 
@@ -37,12 +39,13 @@ export function AddProspectModal({
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
+  const [businessName, setBusinessName] = useState('');
   const [dealership, setDealership] = useState(
     defaultDealership && defaultDealership !== 'All Locations'
       ? defaultDealership
       : selectedRooftop !== 'All Locations'
       ? selectedRooftop
-      : locations[0] || 'BYD South Morang'
+      : locations[0] || ''
   );
   const [vehicleMake, setVehicleMake] = useState('');
   const [vehicleModel, setVehicleModel] = useState('');
@@ -55,9 +58,18 @@ export function AddProspectModal({
   const [tradeModel, setTradeModel] = useState('');
   const [tradeYear, setTradeYear] = useState('');
   const [tradeRego, setTradeRego] = useState('');
+  const [tradeVin, setTradeVin] = useState('');
+  const [lookingUp, setLookingUp] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      const preferred = defaultDealership || selectedRooftop;
+      setDealership(locations.includes(preferred) ? preferred : locations[0] || '');
+    }
+  }, [isOpen, selectedRooftop, defaultDealership, locations]);
 
   if (!isOpen) return null;
 
@@ -71,8 +83,8 @@ export function AddProspectModal({
   ];
 
   const handleSubmit = async () => {
-    if (!name.trim()) {
-      setError('Please provide customer full name.');
+    if (!name.trim() || !phone.trim() || !email.trim()) {
+      setError('Provide the customer’s full name, mobile and email.');
       return;
     }
     if (!dealership) {
@@ -91,6 +103,7 @@ export function AddProspectModal({
         customer_phone: phone.trim(),
         email: email.trim().toLowerCase(),
         customer_email: email.trim().toLowerCase(),
+        business_name: businessName.trim(),
         dealership,
         vehicle: vehicleDesc || 'General Inquiry',
         make: vehicleMake.trim(),
@@ -103,12 +116,13 @@ export function AddProspectModal({
         priority: true,
       };
 
-      if (hasTradeIn && tradeMake.trim()) {
+      if (hasTradeIn && (tradeMake.trim() || tradeRego.trim() || tradeVin.trim())) {
         payload.tradeIn = {
           make: tradeMake.trim(),
           model: tradeModel.trim(),
           year: Number(tradeYear) || undefined,
           rego: tradeRego.trim().toUpperCase(),
+          vin: tradeVin.trim().toUpperCase(),
         };
       }
 
@@ -175,6 +189,7 @@ export function AddProspectModal({
               />
             </View>
 
+            <WorkflowField label="Business name (optional)" value={businessName} onChangeText={setBusinessName} />
             {/* Mobile & Email */}
             <View style={styles.rowFields}>
               <View style={[styles.formGroup, { flex: 1 }]}>
@@ -242,7 +257,7 @@ export function AddProspectModal({
                   style={styles.textInput}
                   value={vehicleMake}
                   onChangeText={setVehicleMake}
-                  placeholder="e.g. BYD / Chery"
+                  placeholder="e.g. Kia / Chery"
                   placeholderTextColor="#94a3b8"
                 />
               </View>
@@ -338,6 +353,21 @@ export function AddProspectModal({
                         placeholderTextColor="#94a3b8"
                         autoCapitalize="characters"
                       />
+                      <WorkflowButton label={lookingUp ? 'Looking up…' : 'Look up VIN'} disabled={lookingUp || !tradeRego || !dealership} onPress={async () => {
+                        setLookingUp(true);
+                        setError(null);
+                        try {
+                          const response = await workflows.lookup(tradeRego, dealership);
+                          if (response.data) {
+                            setTradeVin(response.data.vin || '');
+                            setTradeMake(response.data.make || '');
+                            setTradeModel(response.data.model || '');
+                            setTradeYear(response.data.year ? String(response.data.year) : '');
+                          }
+                        } catch (reason) { setError((reason as Error).message); }
+                        finally { setLookingUp(false); }
+                      }} />
+                      <WorkflowField label="Trade-in VIN" value={tradeVin} onChangeText={setTradeVin} />
                     </View>
                   </View>
                 </View>

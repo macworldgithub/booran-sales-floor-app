@@ -17,7 +17,7 @@ import {
   AuthUser,
 } from '../types';
 
-export const PRODUCTION_URL = 'https://booran-sales-floor-backend.vercel.app/api';
+export const PRODUCTION_URL = process.env.EXPO_PUBLIC_BOORAN_API_URL || 'https://booran-sales-floor-backend.goodshowroom.com/api';
 const DEFAULT_URL = PRODUCTION_URL;
 
 const STORAGE_KEY_API_URL = '@booran_api_url';
@@ -62,6 +62,10 @@ export function getApiBaseUrl(): string {
   return currentBaseUrl;
 }
 
+export function authorisedImage(endpoint: string): { uri: string; headers: Record<string, string> } {
+  return { uri: `${currentBaseUrl}${endpoint}`, headers: currentSessionToken ? { Authorization: `Bearer ${currentSessionToken}` } : {} };
+}
+
 export async function setSessionToken(token: string | null) {
   currentSessionToken = token;
   if (token) {
@@ -94,6 +98,7 @@ export async function fetchApi<T>(
   }
 
   const url = `${currentBaseUrl}${endpoint}`;
+  const requestToken = currentSessionToken;
   try {
     const response = await fetch(url, {
       credentials: 'include',
@@ -101,29 +106,9 @@ export async function fetchApi<T>(
       headers,
     });
 
-    // Check Set-Cookie for booran_session across various fetch polyfill formats
-    try {
-      let cookieStr = response.headers.get('set-cookie') || '';
-      if (!cookieStr && typeof (response.headers as any).getSetCookie === 'function') {
-        const cookies = (response.headers as any).getSetCookie();
-        cookieStr = Array.isArray(cookies) ? cookies.join('; ') : '';
-      }
-      if (!cookieStr && (response.headers as any).map) {
-        cookieStr = (response.headers as any).map['set-cookie'] || '';
-      }
-      if (cookieStr) {
-        const match = cookieStr.match(/booran_session=([a-f0-9]{64})/);
-        if (match && match[1]) {
-          await setSessionToken(match[1]);
-        }
-      }
-    } catch {
-      // Header inspection safe ignore
-    }
-
     const json = await response.json().catch(() => null);
 
-    if (response.status === 401 && endpoint !== '/auth/login') {
+    if (requestToken === currentSessionToken && response.status === 401 && endpoint !== '/auth/login') {
       if (onUnauthorizedCallback) {
         onUnauthorizedCallback();
       }
@@ -187,8 +172,13 @@ export const leadApi = {
     return fetchApi<Lead[]>(`/leads${query}`);
   },
   getLead: (id: string) => fetchApi<Lead>(`/leads/${encodeURIComponent(id)}`),
+  getAssignees: (id: string) => fetchApi<{ id: string; name: string; email: string }[]>(`/leads/${encodeURIComponent(id)}/assignees`),
+  assign: (id: string, assigneeId: string | null, expectedOwnerId: string | null) =>
+    fetchApi<Lead>(`/leads/${encodeURIComponent(id)}/assignment`, {
+      method: 'PATCH', body: JSON.stringify({ assigneeId, expectedOwnerId }),
+    }),
   createLead: (data: Partial<Lead>) =>
-    fetchApi<Lead>('/leads', { method: 'POST', body: JSON.stringify(data) }),
+    fetchApi<Lead>('/prospects', { method: 'POST', body: JSON.stringify(data) }),
   updateLead: (id: string, data: Partial<Lead>) =>
     fetchApi<Lead>(`/leads/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(data) }),
   addNote: (id: string, note: string, author?: string) =>
@@ -214,6 +204,12 @@ export const customerMessageApi = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+  setAi: (id: string, enabled: boolean, resumeAfterHours = 0) => fetchApi<{ enabled: boolean; resumeHours: number }>(`/leads/${encodeURIComponent(id)}/ai`, {
+    method: 'PATCH', body: JSON.stringify({ enabled, resumeAfterHours }),
+  }),
+  draft: (id: string, question: string) => fetchApi<{ draft: string }>(`/leads/${encodeURIComponent(id)}/ai/draft`, {
+    method: 'POST', body: JSON.stringify({ question }),
+  }),
 };
 
 // ─── INVENTORY & CAPITAL RADAR ──────────────────────────────────────────────
@@ -256,7 +252,7 @@ export const inventoryApi = {
     }),
   getInventoryRooftops: (rooftop?: string) =>
     fetchApi<Rooftop[]>(`/inventory/rooftops?rooftop=${encodeURIComponent(rooftop || 'All Locations')}`),
-  getInventoryStats: () => fetchApi<any>('/inventory/stats'),
+  getInventoryStats: (rooftop = 'All Locations') => fetchApi<any>(`/inventory/stats?rooftop=${encodeURIComponent(rooftop)}`),
   getFeedLogs: (params?: Record<string, string | number>) => {
     const query = params
       ? '?' +

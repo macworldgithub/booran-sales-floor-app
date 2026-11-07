@@ -75,6 +75,12 @@
 	<false/>
 	<key>UIStatusBarStyle</key>
 	<string>UIStatusBarStyleDefault</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Allow Booran Sales Floor to capture vehicle inspection and completion photos.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Allow Booran Sales Floor to attach customer photos and videos.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Allow Booran Sales Floor to verify your dealership check-in and accessory completion.</string>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

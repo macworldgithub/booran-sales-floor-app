@@ -292,7 +292,7 @@ export function Header({
                   searchResults.actionItems.length === 0 && (
                     <View style={styles.noResults}>
                       <Text style={styles.noResultsText}>
-                        No records found matching "{searchQuery}".
+                        {`No records found matching “${searchQuery}”.`}
                       </Text>
                     </View>
                   )}

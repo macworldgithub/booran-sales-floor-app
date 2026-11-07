@@ -5,7 +5,6 @@ import {
   Modal,
   ScrollView,
   TouchableOpacity,
-  TextInput,
   StyleSheet,
   ActivityIndicator,
   Image,
@@ -15,7 +14,6 @@ import {
   X,
   Car,
   Lock,
-  Unlock,
   DollarSign,
   Clock,
   ShieldCheck,
@@ -47,41 +45,12 @@ export function VehicleDetailModal({
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
 
-  const [isHolding, setIsHolding] = useState(false);
-  const [prospectName, setProspectName] = useState('');
-  const [holdNotes, setHoldNotes] = useState('');
   const [isSubmittingHold, setIsSubmittingHold] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   if (!isOpen || !vehicle) return null;
 
   const isHeld = vehicle.status === 'Soft Hold' || Boolean(vehicle.softHold?.held);
-
-  const handlePlaceHold = async () => {
-    if (!prospectName.trim() || isSubmittingHold) return;
-    setIsSubmittingHold(true);
-    setError(null);
-    try {
-      const res = await inventoryApi.softHold(vehicle._id, {
-        prospectName: prospectName.trim(),
-        notes: holdNotes.trim(),
-        consultant: user?.name,
-      });
-      if (res.success && res.data) {
-        onVehicleUpdated?.(res.data);
-        setIsHolding(false);
-        setProspectName('');
-        setHoldNotes('');
-        onShowToast?.(`Soft hold placed for ${prospectName.trim()}`);
-      } else {
-        throw new Error(res.error || 'Unable to place soft hold.');
-      }
-    } catch (err: any) {
-      setError(err?.message || 'Failed to place hold.');
-    } finally {
-      setIsSubmittingHold(false);
-    }
-  };
 
   const handleReleaseHold = async () => {
     setIsSubmittingHold(true);
@@ -199,106 +168,20 @@ export function VehicleDetailModal({
           )}
 
           <ScrollView style={styles.sheetBody} showsVerticalScrollIndicator={false}>
-            {/* Soft Hold Management Card */}
-            <View
-              style={[
-                styles.sectionCard,
-                isHeld ? styles.holdActiveCard : styles.holdInactiveCard,
-              ]}
-            >
-              <View style={styles.holdHeader}>
-                <View style={styles.holdHeaderLeft}>
-                  {isHeld ? (
+            {isHeld && (
+              <View style={[styles.sectionCard, styles.holdActiveCard]}>
+                <View style={styles.holdHeader}>
+                  <View style={styles.holdHeaderLeft}>
                     <Lock size={18} color={colors.amber} />
-                  ) : (
-                    <Unlock size={18} color={colors.emerald} />
-                  )}
-                  <Text style={styles.holdHeaderTitle}>
-                    {isHeld ? 'Active Soft Hold' : 'Soft Hold Available'}
-                  </Text>
-                </View>
-
-                {isHeld && (
-                  <TouchableOpacity
-                    onPress={handleReleaseHold}
-                    disabled={isSubmittingHold}
-                    style={styles.releaseHoldBtn}
-                  >
-                    {isSubmittingHold ? (
-                      <ActivityIndicator size="small" color="#ffffff" />
-                    ) : (
-                      <Text style={styles.releaseHoldBtnText}>Release Hold</Text>
-                    )}
-                  </TouchableOpacity>
-                )}
-              </View>
-
-              {isHeld ? (
-                <View style={styles.holdDetails}>
-                  <Text style={styles.holdProspect}>
-                    Customer: <Text style={{ fontWeight: '800' }}>{vehicle.softHold?.prospectName || 'Prospect'}</Text>
-                  </Text>
-                  {vehicle.softHold?.consultant && (
-                    <Text style={styles.holdConsultant}>
-                      Held by: {vehicle.softHold.consultant}
-                    </Text>
-                  )}
-                  {vehicle.softHold?.notes && (
-                    <Text style={styles.holdNotes}>Notes: {vehicle.softHold.notes}</Text>
-                  )}
-                </View>
-              ) : isHolding ? (
-                <View style={styles.holdForm}>
-                  <Text style={styles.formLabel}>Customer / Prospect Name</Text>
-                  <TextInput
-                    style={styles.formInput}
-                    placeholder="Enter prospect name..."
-                    placeholderTextColor="#94a3b8"
-                    value={prospectName}
-                    onChangeText={setProspectName}
-                    autoFocus
-                  />
-                  <Text style={styles.formLabel}>Hold Notes (Optional)</Text>
-                  <TextInput
-                    style={styles.formInput}
-                    placeholder="E.g., Deposit pending, test drive scheduled..."
-                    placeholderTextColor="#94a3b8"
-                    value={holdNotes}
-                    onChangeText={setHoldNotes}
-                  />
-                  <View style={styles.holdActions}>
-                    <TouchableOpacity
-                      onPress={handlePlaceHold}
-                      disabled={!prospectName.trim() || isSubmittingHold}
-                      style={[
-                        styles.confirmHoldBtn,
-                        (!prospectName.trim() || isSubmittingHold) && { opacity: 0.6 },
-                      ]}
-                    >
-                      {isSubmittingHold ? (
-                        <ActivityIndicator size="small" color="#ffffff" />
-                      ) : (
-                        <Text style={styles.confirmHoldBtnText}>Confirm Hold</Text>
-                      )}
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => setIsHolding(false)}
-                      style={styles.cancelHoldBtn}
-                    >
-                      <Text style={styles.cancelHoldBtnText}>Cancel</Text>
-                    </TouchableOpacity>
+                    <Text style={styles.holdHeaderTitle}>Existing Soft Hold</Text>
                   </View>
+                  {user?.canAllocate && <TouchableOpacity onPress={handleReleaseHold} disabled={isSubmittingHold} style={styles.releaseHoldBtn}>
+                    {isSubmittingHold ? <ActivityIndicator size="small" color="#ffffff" /> : <Text style={styles.releaseHoldBtnText}>Release Hold</Text>}
+                  </TouchableOpacity>}
                 </View>
-              ) : (
-                <TouchableOpacity
-                  onPress={() => setIsHolding(true)}
-                  style={styles.placeHoldTrigger}
-                >
-                  <Lock size={14} color="#ffffff" />
-                  <Text style={styles.placeHoldTriggerText}>Place 48h Soft Hold</Text>
-                </TouchableOpacity>
-              )}
-            </View>
+                {vehicle.softHold?.prospectName && <Text style={styles.holdProspect}>{vehicle.softHold.prospectName}</Text>}
+              </View>
+            )}
 
             {/* Financial Metrics */}
             <View style={styles.sectionCard}>
@@ -311,6 +194,7 @@ export function VehicleDetailModal({
                   </Text>
                 </View>
 
+                {user?.viewCost && <>
                 <View style={styles.metricBox}>
                   <Text style={styles.metricBoxLabel}>VEHICLE COST</Text>
                   <Text style={styles.metricBoxValue}>
@@ -349,6 +233,7 @@ export function VehicleDetailModal({
                   </Text>
                 </View>
 
+                </>}
                 <View style={styles.metricBox}>
                   <Text style={styles.metricBoxLabel}>LOCATION</Text>
                   <Text style={styles.metricBoxValue} numberOfLines={1}>

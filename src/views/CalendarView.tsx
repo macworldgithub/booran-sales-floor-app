@@ -19,22 +19,32 @@ import {
   AlertCircle,
 } from 'lucide-react-native';
 import { Appointment } from '../types';
-import { appointmentApi } from '../services/api';
+import { appointmentApi, staffApi } from '../services/api';
+import { melbourneDate } from '../services/dates';
+import { Pagination } from '../components/common/Pagination';
+import { WorkflowButton, workflowStyles } from '../components/common/WorkflowControls';
+import { Delivery, Task, workflows } from '../services/workflows';
 import { colors, shadows } from '../theme/theme';
 import { useAuth } from '../context/AuthContext';
 
 interface CalendarViewProps {
   onOpenBookDrive: () => void;
+  revision?: number;
 }
 
-export function CalendarView({ onOpenBookDrive }: CalendarViewProps) {
-  const { selectedRooftop } = useAuth();
+export function CalendarView({ onOpenBookDrive, revision }: CalendarViewProps) {
+  const { selectedRooftop, user } = useAuth();
 
-  const [selectedDate, setSelectedDate] = useState(() => {
-    return new Date().toISOString().split('T')[0];
-  });
+  const [selectedDate, setSelectedDate] = useState(melbourneDate);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [typeFilter, setTypeFilter] = useState('all');
+  const [consultant, setConsultant] = useState('');
+  const [staff, setStaff] = useState<string[]>([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [pages, setPages] = useState(1);
+  const [dayTasks, setDayTasks] = useState<Task[]>([]);
+  const [dayDeliveries, setDayDeliveries] = useState<Delivery[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,6 +54,8 @@ export function CalendarView({ onOpenBookDrive }: CalendarViewProps) {
     'Showroom Visit',
     'Delivery Handover',
     'Callback',
+    'Walk-in',
+    'Lunch',
   ];
 
   const fetchAppointments = useCallback(async () => {
@@ -52,7 +64,10 @@ export function CalendarView({ onOpenBookDrive }: CalendarViewProps) {
     try {
       const params: Record<string, string | number> = {
         date: selectedDate,
-        limit: 50,
+        limit: 20,
+        page,
+        type: typeFilter,
+        consultant,
       };
       if (selectedRooftop !== 'All Locations') {
         params.rooftop = selectedRooftop;
@@ -61,6 +76,8 @@ export function CalendarView({ onOpenBookDrive }: CalendarViewProps) {
       const res = await appointmentApi.getAppointments(params);
       if (res.success && res.data) {
         setAppointments(res.data);
+        setTotal(res.pagination?.total ?? res.data.length);
+        setPages(Math.max(1, res.pagination?.totalPages ?? 1));
       } else {
         throw new Error(res.error || 'Failed to fetch appointments.');
       }
@@ -69,26 +86,55 @@ export function CalendarView({ onOpenBookDrive }: CalendarViewProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedDate, selectedRooftop]);
+  }, [selectedDate, selectedRooftop, page, typeFilter, consultant]);
 
   useEffect(() => {
     fetchAppointments();
-  }, [fetchAppointments]);
+  }, [fetchAppointments, revision]);
+
+  useEffect(() => {
+    let active = true;
+    setDayTasks([]);
+    setDayDeliveries([]);
+    Promise.allSettled([
+      workflows.tasks(selectedRooftop, selectedDate, consultant),
+      consultant ? Promise.resolve(null) : workflows.deliveries(selectedRooftop, 1, 'scheduled', selectedDate),
+    ]).then(([tasks, deliveries]) => {
+      if (!active) return;
+      if (tasks.status === 'fulfilled') setDayTasks(tasks.value.data || []);
+      if (deliveries.status === 'fulfilled') setDayDeliveries(deliveries.value?.data || []);
+    });
+    return () => { active = false; };
+  }, [selectedRooftop, selectedDate, consultant, revision]);
+
+  useEffect(() => {
+    setConsultant('');
+    setPage(1);
+    if (!user?.canAllocate) return;
+    let active = true;
+    staffApi.getStaff(selectedRooftop).then(result => {
+      if (active) setStaff([...new Set((result.data || []).map(item => item.name).filter(name => name !== 'Unassigned'))].sort());
+    }).catch(() => { if (active) setStaff([]); });
+    return () => { active = false; };
+  }, [selectedRooftop, user?.canAllocate]);
 
   const handlePrevDay = () => {
     const d = new Date(selectedDate);
-    d.setDate(d.getDate() - 1);
+    d.setUTCDate(d.getUTCDate() - 1);
+    setPage(1);
     setSelectedDate(d.toISOString().split('T')[0]);
   };
 
   const handleNextDay = () => {
     const d = new Date(selectedDate);
-    d.setDate(d.getDate() + 1);
+    d.setUTCDate(d.getUTCDate() + 1);
+    setPage(1);
     setSelectedDate(d.toISOString().split('T')[0]);
   };
 
   const handleToday = () => {
-    setSelectedDate(new Date().toISOString().split('T')[0]);
+    setPage(1);
+    setSelectedDate(melbourneDate());
   };
 
   const filteredAppointments = appointments.filter((a) => {
@@ -136,7 +182,7 @@ export function CalendarView({ onOpenBookDrive }: CalendarViewProps) {
             return (
               <TouchableOpacity
                 key={type}
-                onPress={() => setTypeFilter(type)}
+                onPress={() => { setTypeFilter(type); setPage(1); }}
                 style={[styles.typePill, isSelected && styles.typePillSelected]}
               >
                 <Text style={[styles.typePillText, isSelected && styles.typePillTextSelected]}>
@@ -147,6 +193,13 @@ export function CalendarView({ onOpenBookDrive }: CalendarViewProps) {
           })}
         </ScrollView>
       </View>
+      {user?.canAllocate && !!staff.length && <View style={styles.typesScrollWrapper}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={workflowStyles.row}>
+          <WorkflowButton label="Whole team" disabled={!consultant} onPress={() => { setConsultant(''); setPage(1); }} />
+          {staff.map(name => <WorkflowButton key={name} label={name} disabled={consultant === name} onPress={() => { setConsultant(name); setPage(1); }} />)}
+        </ScrollView>
+      </View>}
+      {pages > 1 && <Pagination currentPage={page} totalPages={pages} totalItems={total} pageSize={20} onPageChange={setPage} itemName="bookings" />}
 
       {/* Error state */}
       {error && (
@@ -164,6 +217,16 @@ export function CalendarView({ onOpenBookDrive }: CalendarViewProps) {
         contentContainerStyle={styles.scheduleContent}
         showsVerticalScrollIndicator={false}
       >
+        {!!(dayTasks.length || dayDeliveries.length) && <View style={workflowStyles.card}>
+          {!!dayTasks.length && <Text style={workflowStyles.label}>Follow-ups due</Text>}
+          {dayTasks.map(task => <Text key={task._id} style={workflowStyles.text}>
+            {new Date(task.due_at).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', timeZone: 'Australia/Melbourne' })} · {task.title} · {task.assignee_name}
+          </Text>)}
+          {!!dayDeliveries.length && <Text style={workflowStyles.label}>Delivery handovers</Text>}
+          {dayDeliveries.map(delivery => <Text key={delivery._id} style={workflowStyles.text}>
+            {new Date(delivery.when).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', timeZone: 'Australia/Melbourne' })} · {delivery.customer_name} · {delivery.dealership}
+          </Text>)}
+        </View>}
         {isLoading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.signalRed} />
@@ -174,7 +237,7 @@ export function CalendarView({ onOpenBookDrive }: CalendarViewProps) {
             <CalendarIcon size={36} color="#cbd5e1" />
             <Text style={styles.emptyTitle}>No bookings on this day</Text>
             <Text style={styles.emptySubtitle}>
-              Select another day or tap "Book Appointment" to schedule a test drive or showroom consultation.
+              Select another day or tap Book Appointment to schedule a test drive or showroom consultation.
             </Text>
             <TouchableOpacity onPress={onOpenBookDrive} style={styles.bookScheduleBtn}>
               <Text style={styles.bookScheduleBtnText}>Book Test Drive</Text>

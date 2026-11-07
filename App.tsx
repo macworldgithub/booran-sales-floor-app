@@ -5,9 +5,11 @@ import {
   StyleSheet,
   ActivityIndicator,
   StatusBar,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
+import * as Notifications from 'expo-notifications';
 
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { Header } from './src/components/common/Header';
@@ -32,13 +34,16 @@ import { BookTestDriveModal } from './src/components/modals/BookTestDriveModal';
 import { AddProspectModal } from './src/components/modals/AddProspectModal';
 import { NotificationCenterModal } from './src/components/modals/NotificationCenterModal';
 import { SettingsModal } from './src/components/modals/SettingsModal';
+import { DeliveryCentre } from './src/components/common/DeliveryCentre';
+import { WorkflowButton } from './src/components/common/WorkflowControls';
 
 import { Lead, Vehicle, ActionItem, Appointment, UnifiedSummary } from './src/types';
 import { leadApi, inventoryApi, appointmentApi, unifiedApi } from './src/services/api';
 import { colors } from './src/theme/theme';
+import { melbourneDate } from './src/services/dates';
 
 function MainSalesFloorApp() {
-  const { user, isAuthenticated, isLoading: authLoading, selectedRooftop } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading, selectedRooftop, logout } = useAuth();
 
   // Navigation state
   const [activeTab, setActiveTab] = useState<string>('today');
@@ -64,21 +69,23 @@ function MainSalesFloorApp() {
 
   // Telemetry data stores
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [leadRevision, setLeadRevision] = useState(0);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [actionItems, setActionItems] = useState<ActionItem[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [calendarRevision, setCalendarRevision] = useState(0);
   const [unifiedSummary, setUnifiedSummary] = useState<UnifiedSummary | null>(null);
   const [isDataLoading, setIsDataLoading] = useState(false);
 
   const loadVersion = useRef(0);
 
   const loadInitialData = useCallback(async () => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || user?.role === 'contractor') return;
     const version = ++loadVersion.current;
     setIsDataLoading(true);
 
     try {
-      const todayStr = new Date().toISOString().split('T')[0];
+      const todayStr = melbourneDate();
 
       const [leadsRes, vehiclesRes, actionsRes, apptsRes, summaryRes] = await Promise.all([
         leadApi
@@ -122,11 +129,37 @@ function MainSalesFloorApp() {
         setIsDataLoading(false);
       }
     }
-  }, [isAuthenticated, selectedRooftop]);
+  }, [isAuthenticated, selectedRooftop, user?.role]);
 
   useEffect(() => {
+    setSelectedLead(null);
+    setSelectedVehicle(null);
+    setLeads([]);
+    setVehicles([]);
+    setActionItems([]);
+    setAppointments([]);
+    setUnifiedSummary(null);
     loadInitialData();
+    return () => { loadVersion.current++; };
   }, [loadInitialData]);
+
+  useEffect(() => {
+    if (!isAuthenticated || user?.role === 'contractor') return;
+    let active = true;
+    const open = async (response: Notifications.NotificationResponse) => {
+      const id = response.notification.request.content.data?.leadId;
+      if (typeof id !== 'string') return;
+      const result = await leadApi.getLead(id).catch(() => null);
+      if (active && result?.data) setSelectedLead(result.data);
+    };
+    const subscription = Notifications.addNotificationResponseReceivedListener(response => { void open(response); });
+    const previous = Notifications.getLastNotificationResponse();
+    if (previous) {
+      Notifications.clearLastNotificationResponse();
+      void open(previous);
+    }
+    return () => { active = false; subscription.remove(); };
+  }, [isAuthenticated, user?.role]);
 
   if (authLoading) {
     return (
@@ -150,6 +183,13 @@ function MainSalesFloorApp() {
       </>
     );
   }
+
+  if (user?.role === 'contractor') return (
+    <ScrollView style={styles.container} contentContainerStyle={{ padding: 16, paddingTop: 55 }}>
+      <DeliveryCentre initialOpen />
+      <WorkflowButton label="Sign out" onPress={logout} />
+    </ScrollView>
+  );
 
   const unreadNotifications = Boolean(
     (unifiedSummary?.crm?.newLeads ?? 0) > 0 ||
@@ -195,6 +235,7 @@ function MainSalesFloorApp() {
 
         {activeTab === 'leads' && (
           <LeadsView
+            revision={leadRevision}
             onSelectLead={(l) => setSelectedLead(l)}
             onOpenBookDrive={(l) => {
               setBookDriveLead(l || null);
@@ -214,6 +255,7 @@ function MainSalesFloorApp() {
 
         {activeTab === 'calendar' && (
           <CalendarView
+            revision={calendarRevision}
             onOpenBookDrive={() => {
               setBookDriveLead(null);
               setIsBookDriveOpen(true);
@@ -259,11 +301,14 @@ function MainSalesFloorApp() {
 
       {/* Modals */}
       <Customer360Modal
+        key={selectedLead?._id || 'no-lead'}
+        onOpenRelated={setSelectedLead}
         lead={selectedLead}
         isOpen={Boolean(selectedLead)}
         onClose={() => setSelectedLead(null)}
         onLeadUpdated={(updated) => {
           setSelectedLead(updated);
+          setLeadRevision(value => value + 1);
           setLeads((prev) =>
             prev.map((l) => (l._id === updated._id ? { ...l, ...updated } : l))
           );
@@ -288,27 +333,31 @@ function MainSalesFloorApp() {
         onShowToast={showToast}
       />
 
-      <BookTestDriveModal
+      {isBookDriveOpen && <BookTestDriveModal
+        key={bookDriveLead?._id || 'standalone-booking'}
         isOpen={isBookDriveOpen}
         onClose={() => setIsBookDriveOpen(false)}
         lead={bookDriveLead}
         onAppointmentCreated={(newAppt) => {
           setAppointments((prev) => [newAppt, ...prev]);
+          setCalendarRevision(value => value + 1);
         }}
         onShowToast={showToast}
-      />
+      />}
 
-      <AddProspectModal
+      {isAddProspectOpen && <AddProspectModal
         isOpen={isAddProspectOpen}
         onClose={() => setIsAddProspectOpen(false)}
         onLeadCreated={(newLead) => {
           setLeads((prev) => [newLead, ...prev]);
+          setLeadRevision(value => value + 1);
           setSelectedLead(newLead);
         }}
         onShowToast={showToast}
-      />
+      />}
 
       <NotificationCenterModal
+        onOpenLead={setSelectedLead}
         isOpen={isNotificationsOpen}
         onClose={() => setIsNotificationsOpen(false)}
         summary={unifiedSummary}
@@ -331,11 +380,16 @@ function MainSalesFloorApp() {
   );
 }
 
+function SalesFloorSession() {
+  const { user } = useAuth();
+  return <MainSalesFloorApp key={user?.id || 'signed-out'} />;
+}
+
 export default function App() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <MainSalesFloorApp />
+        <SalesFloorSession />
       </AuthProvider>
     </SafeAreaProvider>
   );
