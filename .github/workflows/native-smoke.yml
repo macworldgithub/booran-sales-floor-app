@@ -1,0 +1,105 @@
+name: Native smoke tests
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CI: 'true'
+  EXPO_NO_TELEMETRY: '1'
+
+jobs:
+  android:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
+      - run: npx expo prebuild --platform android --clean --no-install
+      - name: Build Android APK
+        working-directory: android
+        run: ./gradlew :app:assembleRelease -PreactNativeArchitectures=x86_64 --no-daemon
+      - name: Install and verify the login screen
+        run: |
+          sdkmanager 'emulator' 'platform-tools' 'system-images;android-36;google_apis;x86_64'
+          printf 'no\n' | avdmanager create avd --force --name booran-smoke --package 'system-images;android-36;google_apis;x86_64'
+          sudo chmod a+rw /dev/kvm
+          emulator -avd booran-smoke -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect > /tmp/booran-emulator.log 2>&1 &
+          trap 'adb logcat -d -s AndroidRuntime ReactNativeJS; adb emu kill || true' EXIT
+          timeout 180 adb wait-for-device
+          timeout 180 bash -c 'until [ "$(adb shell getprop sys.boot_completed | tr -d "\r")" = 1 ]; do sleep 2; done'
+          adb shell input keyevent KEYCODE_WAKEUP
+          adb shell wm dismiss-keyguard
+          adb install android/app/build/outputs/apk/release/app-release.apk
+          adb shell am start -W -n com.booran.salesfloor/.MainActivity
+          for attempt in {1..12}; do
+            if adb shell uiautomator dump /sdcard/booran-window.xml >/dev/null &&
+              adb shell cat /sdcard/booran-window.xml | grep -Fq 'Sign in to your showroom'; then
+              adb exec-out screencap -p > android-login.png
+              exit 0
+            fi
+            sleep 3
+          done
+          echo 'The login screen did not render on Android.' >&2
+          exit 1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-login
+          path: android-login.png
+          retention-days: 7
+
+  ios:
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx expo prebuild --platform ios --clean --no-install
+      - name: Install iOS pods
+        working-directory: ios
+        run: pod install
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios-pod-lock
+          path: ios/Podfile.lock
+          retention-days: 7
+      - name: Build iOS simulator app
+        run: |
+          xcodebuild -workspace ios/BooranSalesFloor.xcworkspace -scheme BooranSalesFloor \
+            -configuration Release -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/booran-ios" -jobs 2 CODE_SIGNING_ALLOWED=NO build -quiet
+      - name: Launch and capture the app
+        run: |
+          simulator=$(xcrun simctl list devices available -j | node -e '
+            const devices = JSON.parse(require("node:fs").readFileSync(0, "utf8")).devices;
+            const phone = Object.values(devices).flat().find(device => device.name.startsWith("iPhone"));
+            if (!phone) throw new Error("No iPhone simulator is available");
+            process.stdout.write(phone.udid);
+          ')
+          xcrun simctl boot "$simulator"
+          xcrun simctl bootstatus "$simulator" -b
+          xcrun simctl install "$simulator" "$RUNNER_TEMP/booran-ios/Build/Products/Release-iphonesimulator/BooranSalesFloor.app"
+          xcrun simctl launch "$simulator" com.booran.salesfloor
+          sleep 10
+          xcrun simctl spawn "$simulator" launchctl list > "$RUNNER_TEMP/booran-ios-processes"
+          grep -F 'UIKitApplication:com.booran.salesfloor' "$RUNNER_TEMP/booran-ios-processes"
+          xcrun simctl io "$simulator" screenshot ios-login.png
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios-login
+          path: ios-login.png
+          retention-days: 7

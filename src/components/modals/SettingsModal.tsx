@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -6,11 +6,13 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
+  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X, Server, Check } from 'lucide-react-native';
 import { colors } from '../../theme/theme';
 import { useAuth } from '../../context/AuthContext';
+import { PRODUCTION_URL } from '../../services/api';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -22,20 +24,30 @@ export function SettingsModal({ isOpen, onClose, onShowToast }: SettingsModalPro
   const insets = useSafeAreaInsets();
   const { apiUrl, updateApiUrl } = useAuth();
   const [draftUrl, setDraftUrl] = useState(apiUrl);
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) { setDraftUrl(apiUrl); setError(''); }
+  }, [apiUrl, isOpen]);
 
   if (!isOpen) return null;
 
-  const presets = [
-    { label: 'iOS Simulator', url: 'http://localhost:5001/api' },
-    { label: 'Android Emulator', url: 'http://10.0.2.2:5001/api' },
-    { label: 'Production Vercel', url: 'https://booran-sales-floor-backend.vercel.app/api' },
-  ];
+  const presets = [{ label: 'Booran backend', url: PRODUCTION_URL }];
+  if (__DEV__ && Platform.OS === 'ios') presets.push({ label: 'iOS Simulator', url: 'http://localhost:5001/api' });
+  if (__DEV__ && Platform.OS === 'android') presets.push({ label: 'Android Emulator', url: 'http://10.0.2.2:5001/api' });
 
   const handleSave = async () => {
-    if (!draftUrl.trim()) return;
-    await updateApiUrl(draftUrl.trim());
-    onShowToast?.('API URL updated');
-    onClose();
+    if (saving) return;
+    setSaving(true);
+    setError('');
+    try {
+      await updateApiUrl(draftUrl);
+      onShowToast?.('API URL updated');
+      onClose();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Unable to save the API settings.');
+    } finally { setSaving(false); }
   };
 
   return (
@@ -71,7 +83,7 @@ export function SettingsModal({ isOpen, onClose, onShowToast }: SettingsModalPro
               style={styles.input}
               value={draftUrl}
               onChangeText={setDraftUrl}
-              placeholder="http://localhost:5001/api"
+              placeholder={PRODUCTION_URL}
               placeholderTextColor="#94a3b8"
               autoCapitalize="none"
               autoCorrect={false}
@@ -97,8 +109,9 @@ export function SettingsModal({ isOpen, onClose, onShowToast }: SettingsModalPro
               })}
             </View>
 
-            <TouchableOpacity onPress={handleSave} style={styles.saveBtn}>
-              <Text style={styles.saveBtnText}>Save & Apply Settings</Text>
+            {!!error && <Text accessibilityRole="alert" style={{ color: colors.danger, marginTop: 8 }}>{error}</Text>}
+            <TouchableOpacity onPress={handleSave} disabled={saving} style={styles.saveBtn}>
+              <Text style={styles.saveBtnText}>{saving ? 'Saving…' : 'Save & Apply Settings'}</Text>
             </TouchableOpacity>
           </View>
         </View>

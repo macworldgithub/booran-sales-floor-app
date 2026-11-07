@@ -36,7 +36,7 @@ React Native / Expo mobile application for the Booran Motors Sales Floor OS, rep
 
 ## Local Development & Running
 
-Ensure Node.js 20+ or 22+ is installed.
+Use Node.js 22.13 or newer in the Node.js 22 series.
 
 ```bash
 cd booran-sales-floor-app
@@ -69,6 +69,8 @@ The mobile app includes a built-in **API Settings** modal accessible from the si
 Set `EXPO_PUBLIC_BOORAN_API_URL` at build time to point a release at another backend. If an existing installation uses a saved API URL, select the VPS URL in API Settings when switching deployments.
 
 Rebuild the native clients after adding the camera, filesystem, geolocation and notification modules. On iOS, install updated CocoaPods on macOS before building. To enable remote alerts, configure APNs and FCM credentials for the app’s EAS project and set `EXPO_PUBLIC_EAS_PROJECT_ID` at build time. Enable alerts from the in-app Notification Centre on a real device.
+
+The local Android and iOS scripts run Expo Prebuild before compiling so the native projects receive the settings and plugins in `app.json`. The manual **Native smoke tests** GitHub Actions workflow generates clean native projects, builds Android and iOS release bundles inside their native apps, and launches them in simulators. Check the login-screen artifacts before preparing a signed device build.
 
 ### Validation & Quality
 

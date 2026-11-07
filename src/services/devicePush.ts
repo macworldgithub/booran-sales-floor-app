@@ -1,7 +1,18 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AndroidImportance, getExpoPushTokenAsync, requestPermissionsAsync, setNotificationChannelAsync } from 'expo-notifications';
+import { AndroidImportance, getExpoPushTokenAsync, requestPermissionsAsync, setNotificationChannelAsync, setNotificationHandler } from 'expo-notifications';
 import { Platform } from 'react-native';
 import { fetchApi } from './api';
+
+if (Platform.OS !== 'web') {
+  setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: false,
+      shouldSetBadge: false,
+    }),
+  });
+}
 
 const tokenKey = '@booran_push_token';
 export const readPushRegistration = () => AsyncStorage.getItem(tokenKey);

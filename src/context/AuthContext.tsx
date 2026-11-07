@@ -11,6 +11,7 @@ import {
   getApiBaseUrl,
   setSessionToken,
   setStoredUser,
+  normalizeApiBaseUrl,
 } from '../services/api';
 
 interface AuthContextValue {
@@ -150,9 +151,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateApiUrl = async (url: string) => {
-    if (url.trim().replace(/\/+$/, '') === getApiBaseUrl()) return;
+    const normalized = normalizeApiBaseUrl(url);
+    if (normalized === getApiBaseUrl()) return;
     if (user) await logout();
-    await setApiBaseUrl(url);
+    await setApiBaseUrl(normalized);
     setApiUrlState(getApiBaseUrl());
   };
 

@@ -32,18 +32,31 @@ export function setOnUnauthorized(callback: () => void) {
   onUnauthorizedCallback = callback;
 }
 
+export function normalizeApiBaseUrl(value: string) {
+  try {
+    const url = new URL(value.trim());
+    const path = url.pathname.replace(/\/+$/, '');
+    const local = ['localhost', '127.0.0.1', '10.0.2.2'].includes(url.hostname);
+    const allowedProtocol = url.protocol === 'https:' || (__DEV__ && local && url.protocol === 'http:');
+    if (allowedProtocol && url.hostname && !url.username && !url.password && !url.search && !url.hash && path.endsWith('/api')) {
+      return `${url.origin}${path}`;
+    }
+  } catch {
+    // Display the same actionable message for invalid and unsupported URLs.
+  }
+  throw new Error('Enter an HTTPS backend URL ending in /api.');
+}
+
 export async function initApiService(): Promise<{ url: string; token: string | null; user: AuthUser | null }> {
   try {
     const savedUrl = await AsyncStorage.getItem(STORAGE_KEY_API_URL);
+    currentBaseUrl = DEFAULT_URL;
     if (savedUrl) {
-      currentBaseUrl = savedUrl;
-    } else {
-      currentBaseUrl = DEFAULT_URL;
+      try { currentBaseUrl = normalizeApiBaseUrl(savedUrl); }
+      catch { await AsyncStorage.removeItem(STORAGE_KEY_API_URL); }
     }
     const token = await AsyncStorage.getItem(STORAGE_KEY_SESSION);
-    if (token) {
-      currentSessionToken = token;
-    }
+    currentSessionToken = token;
     const userJson = await AsyncStorage.getItem(STORAGE_KEY_USER);
     const user = userJson ? JSON.parse(userJson) : null;
     return { url: currentBaseUrl, token, user };
@@ -93,17 +106,22 @@ export async function fetchApi<T>(
   };
 
   if (currentSessionToken) {
-    headers['Cookie'] = `booran_session=${currentSessionToken}`;
     headers['Authorization'] = `Bearer ${currentSessionToken}`;
   }
 
   const url = `${currentBaseUrl}${endpoint}`;
   const requestToken = currentSessionToken;
+  const controller = new AbortController();
+  const cancel = () => controller.abort();
+  if (options.signal?.aborted) cancel();
+  else options.signal?.addEventListener('abort', cancel, { once: true });
+  const timeout = setTimeout(cancel, 20000);
   try {
     const response = await fetch(url, {
-      credentials: 'include',
+      credentials: Platform.OS === 'web' ? 'include' : 'omit',
       ...options,
       headers,
+      signal: controller.signal,
     });
 
     const json = await response.json().catch(() => null);
@@ -126,26 +144,30 @@ export async function fetchApi<T>(
     }
 
     return json;
-  } catch (err: any) {
-    console.warn(`API Error [${options.method || 'GET'}] ${endpoint}:`, err?.message || err);
-    throw err;
+  } catch (error) {
+    if (controller.signal.aborted && !options.signal?.aborted) {
+      throw new Error('The Booran API took too long to respond. Check your connection and try again.');
+    }
+    if (error instanceof TypeError) throw new Error('The Booran API is unreachable. Check your connection or API Settings.');
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+    options.signal?.removeEventListener('abort', cancel);
   }
 }
 
 // ─── AUTH ────────────────────────────────────────────────────────────────────
 export const authApi = {
   login: async (email: string, password?: string) => {
-    const res = await fetchApi<any>('/auth/login', {
+    const res = await fetchApi<{ user: AuthUser; token: string }>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
-    // In addition to cookie, if token was returned in data
-    if (res.data?.token) {
-      await setSessionToken(res.data.token);
+    if (!res.data?.user || !/^[a-f0-9]{64}$/i.test(res.data.token || '')) {
+      throw new Error('The backend did not return a valid mobile session.');
     }
-    if (res.data?.user) {
-      await setStoredUser(res.data.user);
-    }
+    await setSessionToken(res.data.token);
+    await setStoredUser(res.data.user);
     return res;
   },
   me: () => fetchApi<AuthUser>('/auth/me'),
