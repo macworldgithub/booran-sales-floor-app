@@ -261,6 +261,28 @@ export interface AuthUser {
   title?: string;
 }
 
+export type StaffRole = Exclude<AuthUser['role'], 'super_admin'>;
+
+export interface StaffAccess {
+  role: StaffRole;
+  site: string;
+  allowedSites: string[];
+  viewCost: boolean;
+}
+
+export interface StaffAccount extends StaffAccess {
+  id: string;
+  name: string;
+  email: string;
+  active: boolean;
+}
+
+export interface StaffDirectory {
+  accounts: StaffAccount[];
+  roles: StaffRole[];
+  sites: string[];
+}
+
 export interface PageMetadata {
   page: number;
   limit: number;

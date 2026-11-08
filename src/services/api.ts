@@ -15,6 +15,9 @@ import {
   CustomerMessageHistory,
   PageMetadata,
   AuthUser,
+  StaffAccess,
+  StaffAccount,
+  StaffDirectory,
 } from '../types';
 
 export const PRODUCTION_URL = process.env.EXPO_PUBLIC_BOORAN_API_URL || 'https://booran-sales-floor-backend.goodshowroom.com/api';
@@ -306,6 +309,14 @@ export const appointmentApi = {
 export const staffApi = {
   getStaff: (rooftop?: string) =>
     fetchApi<StaffMember[]>(`/staff?rooftop=${encodeURIComponent(rooftop || 'All Locations')}`),
+};
+
+export const staffAdminApi = {
+  list: (signal: AbortSignal) => fetchApi<StaffDirectory>('/admin/staff', { signal }),
+  create: (data: StaffAccess & { name: string; email: string; password: string }) =>
+    fetchApi<StaffAccount>('/admin/staff', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: string, data: StaffAccess) =>
+    fetchApi<StaffAccount>(`/admin/staff/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(data) }),
 };
 
 // ─── UNIFIED DASHBOARD & SEARCH ──────────────────────────────────────────────

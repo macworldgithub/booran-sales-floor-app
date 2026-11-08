@@ -10,18 +10,16 @@ import {
 import {
   UserCheck,
   Award,
-  Users,
-  CheckCircle2,
-  TrendingUp,
-  Percent,
 } from 'lucide-react-native';
 import { StaffMember } from '../types';
 import { staffApi } from '../services/api';
 import { colors, shadows } from '../theme/theme';
 import { useAuth } from '../context/AuthContext';
+import { StaffAccountsModal } from '../components/modals/StaffAccountsModal';
 
 export function StaffView() {
-  const { selectedRooftop } = useAuth();
+  const { selectedRooftop, user } = useAuth();
+  const [manageAccounts, setManageAccounts] = useState(false);
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +59,14 @@ export function StaffView() {
         <Text style={styles.bannerSubtitle}>
           Conversion rates, assigned lead volume, and current floor workload capacity.
         </Text>
+        {user?.role === 'super_admin' && (
+          <TouchableOpacity accessibilityRole="button" onPress={() => setManageAccounts(true)} style={styles.manageButton}>
+            <Text style={styles.manageButtonText}>Manage staff accounts</Text>
+          </TouchableOpacity>
+        )}
       </View>
+
+      {user?.role === 'super_admin' && manageAccounts && <StaffAccountsModal onClose={() => setManageAccounts(false)} />}
 
       {/* Error state */}
       {error && (
@@ -210,6 +215,16 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: 2,
   },
+  manageButton: {
+    alignSelf: 'flex-start',
+    justifyContent: 'center',
+    minHeight: 44,
+    marginTop: 8,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    backgroundColor: colors.graphite,
+  },
+  manageButtonText: { color: colors.textLight, fontWeight: '700' },
   errorBox: {
     flexDirection: 'row',
     justifyContent: 'space-between',
