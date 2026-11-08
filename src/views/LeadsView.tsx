@@ -246,7 +246,7 @@ export function LeadsView({
         }}><Text style={styles.clearSearch}>Apply filters</Text></TouchableOpacity>
       </View>}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersScroll} contentContainerStyle={styles.filtersContent}>
-        {[['all', 'All sources'], ['Nextgate', 'Nextgate'], ['FLWUP Dashboard', 'FLWUP']].map(([value, label]) => (
+        {[['all', 'All sources'], ['Nextgate', 'Nextgate'], ['FLWUP Dashboard', 'FLWUP'], ['SMS Campaign', 'SMS Campaign'], ['DealerSocket', 'DealerSocket']].map(([value, label]) => (
           <TouchableOpacity key={value} onPress={() => { setCurrentPage(1); setSource(value); }}
             style={[styles.filterPill, source === value && styles.filterPillSelected]}>
             <Text style={[styles.filterPillText, source === value && styles.filterPillTextSelected]}>{label}</Text>
