@@ -191,7 +191,7 @@ export function ActionItemsView({
 
       {/* Type & Status Filters */}
       <View style={styles.filtersWrapper}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtersRow}>
+        <ScrollView horizontal style={{ flexGrow: 0 }} showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtersRow}>
           {typeOptions.map((type) => {
             const isSelected = typeFilter === type;
             return (
@@ -452,6 +452,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   bannerTagRow: {
+    flexWrap: 'wrap',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -489,10 +490,11 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    height: 40,
+    minHeight: 44,
     gap: 8,
   },
   searchInput: {
+    minWidth: 0,
     flex: 1,
     fontSize: 13,
     color: colors.textPrimary,
@@ -504,9 +506,10 @@ const styles = StyleSheet.create({
   },
   filtersWrapper: {
     marginTop: 8,
-    maxHeight: 38,
+    flexShrink: 0,
   },
   filtersRow: {
+    paddingVertical: 4,
     paddingHorizontal: 12,
     alignItems: 'center',
     gap: 6,
@@ -602,6 +605,8 @@ const styles = StyleSheet.create({
     ...shadows.sm,
   },
   actionCardTop: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -687,18 +692,23 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   resolutionSheet: {
+    width: '100%',
+    maxWidth: 760,
+    alignSelf: 'center',
     backgroundColor: '#ffffff',
     borderRadius: 16,
     padding: 16,
     ...shadows.lg,
   },
   sheetHeader: {
+    gap: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
   },
   sheetTitle: {
+    flex: 1,
     fontSize: 16,
     fontWeight: '800',
     color: colors.textPrimary,
@@ -721,10 +731,12 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   statusButtonsRow: {
+    flexWrap: 'wrap',
     flexDirection: 'row',
     gap: 8,
   },
   statusBtn: {
+    flexBasis: 100,
     flex: 1,
     paddingVertical: 8,
     borderRadius: 8,

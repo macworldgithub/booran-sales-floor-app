@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Image, StyleSheet, Text, ImageStyle } from 'react-native';
+import { View, Image, StyleSheet, ImageStyle } from 'react-native';
 
 interface BooranLogoProps {
   style?: ImageStyle;
@@ -10,10 +10,10 @@ export function BooranLogo({ style, height = 36 }: BooranLogoProps) {
   const width = height * (240 / 48); // 5:1 ratio
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { width }]}>
       <Image
         source={require('../../../assets/images/booran-motors-logo.png')}
-        style={[{ width, height }, style]}
+        style={[{ width: '100%', height }, style]}
         resizeMode="contain"
       />
     </View>
@@ -22,6 +22,9 @@ export function BooranLogo({ style, height = 36 }: BooranLogoProps) {
 
 const styles = StyleSheet.create({
   container: {
+    maxWidth: '100%',
+    minWidth: 0,
+    flexShrink: 1,
     justifyContent: 'center',
     alignItems: 'flex-start',
   },

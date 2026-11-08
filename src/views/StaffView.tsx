@@ -177,6 +177,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.cardBorder,
   },
   bannerTagRow: {
+    flexWrap: 'wrap',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -273,6 +274,7 @@ const styles = StyleSheet.create({
     ...shadows.sm,
   },
   cardTop: {
+    flexWrap: 'wrap',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
@@ -318,6 +320,8 @@ const styles = StyleSheet.create({
     color: colors.emerald,
   },
   statsRow: {
+    flexWrap: 'wrap',
+    gap: 10,
     flexDirection: 'row',
     justifyContent: 'space-between',
     backgroundColor: '#f8fafc',
@@ -325,10 +329,12 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   statBox: {
+    minWidth: 70,
     alignItems: 'center',
     flex: 1,
   },
   statLabel: {
+    textAlign: 'center',
     fontSize: 9,
     fontWeight: '700',
     color: colors.textMuted,
@@ -344,6 +350,8 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   capacityLabels: {
+    flexWrap: 'wrap',
+    gap: 6,
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 4,

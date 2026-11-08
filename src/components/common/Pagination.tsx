@@ -94,10 +94,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   infoRow: {
+    maxWidth: '100%',
     flexDirection: 'row',
     alignItems: 'center',
   },
   infoText: {
+    flexShrink: 1,
+    textAlign: 'center',
     fontSize: 12,
     color: colors.textSecondary,
   },
@@ -106,9 +109,12 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   controlsRow: {
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    maxWidth: '100%',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   button: {
     padding: 8,
@@ -124,12 +130,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc',
   },
   pageIndicator: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 8,
     paddingVertical: 6,
     borderRadius: 8,
     backgroundColor: colors.appCanvas,
   },
   pageText: {
+    textAlign: 'center',
     fontSize: 12,
     fontWeight: '600',
     color: colors.textSecondary,

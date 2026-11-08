@@ -57,6 +57,8 @@ export function BottomNav({
         styles.container,
         {
           paddingBottom: Math.max(insets.bottom, 10),
+          paddingLeft: insets.left,
+          paddingRight: insets.right,
         },
       ]}
     >
@@ -67,7 +69,11 @@ export function BottomNav({
 
           return (
             <TouchableOpacity
+              accessibilityRole="tab"
+              accessibilityState={{ selected: isActive }}
+              accessibilityLabel={`${tab.label}${tab.badge ? `, ${tab.id === 'leads' ? leadsCount.toLocaleString() : inventoryCount.toLocaleString()} records` : ''}`}
               key={tab.id}
+              testID={`nav-${tab.id}`}
               onPress={() => setActiveTab(tab.id)}
               activeOpacity={0.7}
               style={styles.tabButton}
@@ -97,6 +103,9 @@ export function BottomNav({
         })}
 
         <TouchableOpacity
+          testID="nav-more"
+          accessibilityRole="button"
+          accessibilityLabel="More navigation options"
           onPress={onOpenMore}
           activeOpacity={0.7}
           style={styles.tabButton}
@@ -116,24 +125,26 @@ const styles = StyleSheet.create({
     backgroundColor: '#171b22',
     borderTopWidth: 1,
     borderTopColor: 'rgba(255, 255, 255, 0.1)',
-    paddingTop: 8,
+    paddingTop: 10,
     ...shadows.darkNav,
   },
   navRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    alignItems: 'center',
-    maxWidth: 500,
+    alignItems: 'stretch',
+    maxWidth: 600,
     alignSelf: 'center',
     width: '100%',
   },
   tabButton: {
+    flex: 1,
+    minWidth: 0,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     paddingVertical: 4,
-    paddingHorizontal: 8,
+    paddingHorizontal: 2,
     position: 'relative',
-    minWidth: 56,
+    minHeight: 48,
   },
   activeIndicator: {
     position: 'absolute',
@@ -165,6 +176,8 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   tabLabel: {
+    textAlign: 'center',
+    flexShrink: 1,
     fontSize: 10,
     fontWeight: '600',
     color: '#94a3b8',

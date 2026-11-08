@@ -72,7 +72,7 @@ export function DeliveryCentre({ onOpenLead, initialOpen = false }: { onOpenLead
     reload(n => n + 1);
   });
 
-  return <View style={styles.card}>
+  return <View style={[styles.card, !initialOpen && { marginVertical: 0 }]}>
     <Text style={styles.title}>Delivery Centre</Text>
     {!initialOpen && <WorkflowButton label={open ? 'Hide deliveries' : 'Open delivery bookings'} onPress={() => setOpen(!open)} />}
     {open && <>

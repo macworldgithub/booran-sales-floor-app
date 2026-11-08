@@ -38,6 +38,12 @@ React Native / Expo mobile application for the Booran Motors Sales Floor OS, rep
 
 Use Node.js 22.13 or newer in the Node.js 22 series.
 
+Expo SDK 58 requires **Xcode 26.4 or newer** for supported local iOS builds
+([Expo SDK requirements](https://docs.expo.dev/versions/v58.0.0/)). Check the selected
+installation with `xcodebuild -version`; `xcode-select -p` shows its location.
+If multiple versions are installed, select one for a build with
+`DEVELOPER_DIR=/path/to/Xcode.app/Contents/Developer npm run ios`.
+
 ```bash
 cd booran-sales-floor-app
 npm install
@@ -58,6 +64,15 @@ npm run android
 # Run in Web browser preview
 npm run web
 ```
+
+If Xcode reports `sending 'slot' risks causing data races` in
+`expo-modules-jsi/…/JavaScriptObject.swift`, the install hook applies a targeted
+compatibility patch to `expo-modules-jsi@58.0.22`. It uses Expo's existing
+`UncheckedSendable` helper for the synchronous pointer capture rejected by Swift
+6.2. To apply it to an existing dependency installation, run `npm run postinstall`,
+then `npm run ios`. The patch is idempotent, survives `npm install` / `npm ci`,
+and skips other dependency versions. It does not replace the supported Xcode
+requirement; prefer upgrading Xcode when possible.
 
 ### Backend API Configuration
 

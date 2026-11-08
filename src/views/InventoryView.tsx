@@ -148,7 +148,7 @@ export function InventoryView({ onSelectVehicle }: InventoryViewProps) {
 
       {/* Category & Aging Filters */}
       <View style={styles.filtersWrapper}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtersRow}>
+        <ScrollView horizontal style={{ flexGrow: 0 }} showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtersRow}>
           {categoryOptions.map((cat) => {
             const isSelected = categoryFilter === cat;
             return (
@@ -191,7 +191,7 @@ export function InventoryView({ onSelectVehicle }: InventoryViewProps) {
             );
           })}
         </ScrollView>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtersRow}>
+        <ScrollView horizontal style={{ flexGrow: 0 }} showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtersRow}>
           {[
             ['', selectedRooftop === 'All Locations' ? 'In stock by default' : 'All statuses'],
             ['Deal Pending', 'Deal pending'],
@@ -247,8 +247,8 @@ export function InventoryView({ onSelectVehicle }: InventoryViewProps) {
               >
                 {/* Header row: Year Make Model & Price */}
                 <View style={styles.cardHeader}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.vehicleTitle} numberOfLines={1}>
+                  <View style={styles.vehicleInfo}>
+                    <Text style={styles.vehicleTitle}>
                       {v.year} {v.make} {v.model} {v.variant || ''}
                     </Text>
                     <Text style={styles.vehicleLocation} numberOfLines={1}>
@@ -381,12 +381,14 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.cardBorder,
   },
   bannerTagRow: {
+    flexWrap: 'wrap',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     marginBottom: 2,
   },
   bannerTag: {
+    flexShrink: 1,
     fontSize: 9,
     fontWeight: '800',
     color: '#94a3b8',
@@ -418,10 +420,11 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    height: 40,
+    minHeight: 44,
     gap: 8,
   },
   searchInput: {
+    minWidth: 0,
     flex: 1,
     fontSize: 13,
     color: colors.textPrimary,
@@ -433,9 +436,10 @@ const styles = StyleSheet.create({
   },
   filtersWrapper: {
     marginTop: 8,
-    maxHeight: 38,
+    flexShrink: 0,
   },
   filtersRow: {
+    paddingVertical: 4,
     paddingHorizontal: 12,
     alignItems: 'center',
     gap: 6,
@@ -535,11 +539,14 @@ const styles = StyleSheet.create({
     ...shadows.sm,
   },
   cardHeader: {
+    flexWrap: 'wrap',
+    gap: 10,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
   },
   vehicleTitle: {
+    flexShrink: 1,
     fontSize: 14,
     fontWeight: '800',
     color: colors.textPrimary,
@@ -550,7 +557,13 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   priceColumn: {
+    flexGrow: 1,
     alignItems: 'flex-end',
+  },
+  vehicleInfo: {
+    flexGrow: 1,
+    flexBasis: 180,
+    minWidth: 0,
   },
   priceText: {
     fontSize: 15,
@@ -570,6 +583,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   badge: {
+    maxWidth: '100%',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
@@ -591,6 +605,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   softHoldText: {
+    flex: 1,
     fontSize: 11,
     fontWeight: '700',
     color: '#b45309',

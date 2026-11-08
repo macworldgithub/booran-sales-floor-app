@@ -176,7 +176,7 @@ export function CalendarView({ onOpenBookDrive, revision }: CalendarViewProps) {
 
       {/* Appointment Type Filter Pills */}
       <View style={styles.typesScrollWrapper}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.typesRow}>
+        <ScrollView horizontal style={{ flexGrow: 0 }} showsHorizontalScrollIndicator={false} contentContainerStyle={styles.typesRow}>
           {typeOptions.map((type) => {
             const isSelected = typeFilter === type;
             return (
@@ -194,9 +194,9 @@ export function CalendarView({ onOpenBookDrive, revision }: CalendarViewProps) {
         </ScrollView>
       </View>
       {user?.canAllocate && !!staff.length && <View style={styles.typesScrollWrapper}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={workflowStyles.row}>
-          <WorkflowButton label="Whole team" disabled={!consultant} onPress={() => { setConsultant(''); setPage(1); }} />
-          {staff.map(name => <WorkflowButton key={name} label={name} disabled={consultant === name} onPress={() => { setConsultant(name); setPage(1); }} />)}
+        <ScrollView horizontal style={{ flexGrow: 0 }} showsHorizontalScrollIndicator={false} contentContainerStyle={[workflowStyles.row, styles.staffFilters]}>
+          <WorkflowButton label="Whole team" selected={!consultant} disabled={!consultant} onPress={() => { setConsultant(''); setPage(1); }} />
+          {staff.map(name => <WorkflowButton key={name} label={name} selected={consultant === name} disabled={consultant === name} onPress={() => { setConsultant(name); setPage(1); }} />)}
         </ScrollView>
       </View>}
       {pages > 1 && <Pagination currentPage={page} totalPages={pages} totalItems={total} pageSize={20} onPageChange={setPage} itemName="bookings" />}
@@ -326,6 +326,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f4f5f7',
   },
   dateBar: {
+    flexWrap: 'wrap',
     paddingHorizontal: 14,
     paddingVertical: 12,
     backgroundColor: '#ffffff',
@@ -337,6 +338,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   dateNavRow: {
+    minWidth: 0,
+    flexBasis: 230,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
@@ -348,6 +351,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f1f5f9',
   },
   dateDisplay: {
+    flexShrink: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
@@ -359,6 +363,7 @@ const styles = StyleSheet.create({
     borderColor: colors.cardBorder,
   },
   dateText: {
+    flexShrink: 1,
     fontSize: 13,
     fontWeight: '800',
     color: colors.textPrimary,
@@ -378,13 +383,16 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   typesScrollWrapper: {
-    maxHeight: 38,
+    flexGrow: 0,
     marginTop: 8,
   },
   typesRow: {
+    alignItems: 'center',
+    paddingVertical: 4,
     paddingHorizontal: 12,
     gap: 6,
   },
+  staffFilters: { flexWrap: 'nowrap', paddingHorizontal: 12, paddingVertical: 4 },
   typePill: {
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -482,6 +490,8 @@ const styles = StyleSheet.create({
     ...shadows.sm,
   },
   cardHeader: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -521,17 +531,21 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   apptMetaRow: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: 8,
   },
   metaItem: {
+    maxWidth: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
   },
   metaText: {
+    flexShrink: 1,
     fontSize: 11,
     color: colors.textSecondary,
   },

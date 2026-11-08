@@ -101,12 +101,12 @@ export function NotificationCenterModal({
               <View style={styles.bellIcon}>
                 <Bell size={18} color="#ffffff" />
               </View>
-              <View>
+              <View style={styles.headerDetails}>
                 <Text style={styles.title}>Showroom Command Alerts</Text>
                 <Text style={styles.subtitle}>Executive Notifications & Tasks</Text>
               </View>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel="Close notifications" onPress={onClose} style={styles.closeBtn}>
               <X size={20} color="#64748b" />
             </TouchableOpacity>
           </View>
@@ -260,6 +260,9 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalSheet: {
+    width: '100%',
+    maxWidth: 760,
+    alignSelf: 'center',
     backgroundColor: '#ffffff',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
@@ -267,6 +270,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   sheetHeader: {
+    gap: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -275,11 +279,14 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.cardBorder,
   },
   headerLeft: {
+    flex: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
   bellIcon: {
+    flexShrink: 0,
     width: 36,
     height: 36,
     borderRadius: 18,
@@ -292,6 +299,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: colors.textPrimary,
   },
+  headerDetails: { flex: 1, minWidth: 0 },
   subtitle: {
     fontSize: 11,
     color: colors.textSecondary,

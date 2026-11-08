@@ -155,7 +155,7 @@ export function VehicleDetailModal({
               </Text>
             </View>
 
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel="Close vehicle details" onPress={onClose} style={styles.closeBtn}>
               <X size={20} color="#64748b" />
             </TouchableOpacity>
           </View>
@@ -318,6 +318,9 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalSheet: {
+    width: '100%',
+    maxWidth: 760,
+    alignSelf: 'center',
     backgroundColor: '#f4f5f7',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
@@ -325,6 +328,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   sheetHeader: {
+    gap: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
@@ -333,6 +337,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.cardBorder,
   },
   badgeRow: {
+    flexWrap: 'wrap',
     flexDirection: 'row',
     gap: 6,
     marginBottom: 6,
@@ -524,7 +529,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   metricBox: {
-    width: '47%',
+    flexBasis: 140,
+    flexGrow: 1,
+    minWidth: 0,
     backgroundColor: '#f8fafc',
     borderRadius: 10,
     padding: 10,

@@ -169,6 +169,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.cardBorder,
   },
   bannerTagRow: {
+    flexWrap: 'wrap',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -265,6 +266,7 @@ const styles = StyleSheet.create({
     ...shadows.sm,
   },
   cardHeader: {
+    flexWrap: 'wrap',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
@@ -289,6 +291,7 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   brandBadge: {
+    maxWidth: '100%',
     backgroundColor: '#f1f5f9',
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -308,7 +311,9 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   detailBox: {
-    width: '48%',
+    flexBasis: 130,
+    flexGrow: 1,
+    minWidth: 0,
   },
   detailLabel: {
     fontSize: 9,
@@ -332,6 +337,7 @@ const styles = StyleSheet.create({
     borderTopColor: '#f1f5f9',
   },
   filterStockText: {
+    flexShrink: 1,
     fontSize: 12,
     fontWeight: '700',
     color: colors.signalRed,

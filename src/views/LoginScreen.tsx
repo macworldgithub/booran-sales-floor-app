@@ -171,6 +171,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#171b22',
   },
   scrollContent: {
+    width: '100%',
+    maxWidth: 560,
+    alignSelf: 'center',
     flexGrow: 1,
     justifyContent: 'center',
     paddingHorizontal: 20,
@@ -240,7 +243,8 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   input: {
-    height: 44,
+    minHeight: 44,
+    paddingVertical: 10,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     borderRadius: 10,
@@ -250,7 +254,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc',
   },
   passwordContainer: {
-    height: 44,
+    minHeight: 44,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
@@ -260,17 +264,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc',
   },
   passwordInput: {
+    minWidth: 0,
     flex: 1,
     fontSize: 14,
     color: colors.textPrimary,
-    height: '100%',
+    minHeight: 44,
+    paddingVertical: 10,
   },
   eyeBtn: {
     padding: 4,
   },
   submitButton: {
     backgroundColor: colors.signalRed,
-    height: 46,
+    minHeight: 46,
+    paddingVertical: 12,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { colors, shadows } from '../../theme/theme';
 
 interface MetricCardProps {
@@ -19,6 +19,7 @@ export function MetricCard({
   tone = 'neutral',
   onPress,
 }: MetricCardProps) {
+  const { fontScale } = useWindowDimensions();
   const getToneColors = () => {
     switch (tone) {
       case 'red':
@@ -82,8 +83,8 @@ export function MetricCard({
     >
       <View style={styles.header}>
         <View style={styles.textContainer}>
-          <Text style={styles.label} numberOfLines={1}>
-            {label.toUpperCase()}
+          <Text style={[styles.label, { minHeight: 32 * fontScale }]}>
+            {label}
           </Text>
           <Text style={styles.value} numberOfLines={1}>
             {typeof value === 'number' ? value.toLocaleString() : value}
@@ -93,7 +94,7 @@ export function MetricCard({
           <Icon size={16} color={toneConfig.iconColor} />
         </View>
       </View>
-      <Text style={styles.change} numberOfLines={1}>
+      <Text style={styles.change}>
         {change}
       </Text>
     </CardWrapper>
@@ -103,11 +104,10 @@ export function MetricCard({
 const styles = StyleSheet.create({
   card: {
     flex: 1,
-    minWidth: 150,
-    padding: 12,
+    minWidth: 0,
+    padding: 14,
     borderRadius: 14,
     borderWidth: 1,
-    margin: 4,
     ...shadows.sm,
   },
   header: {
@@ -121,14 +121,15 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   label: {
-    fontSize: 10,
+    minHeight: 32,
+    lineHeight: 16,
+    fontSize: 12,
     fontWeight: '700',
     color: colors.textSecondary,
-    letterSpacing: 0.5,
-    marginBottom: 2,
+    marginBottom: 6,
   },
   value: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: '800',
     color: colors.textPrimary,
     letterSpacing: -0.5,

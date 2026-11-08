@@ -398,10 +398,14 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#171b22',
+    backgroundColor: '#f4f5f7',
   },
   mainView: {
     flex: 1,
+    minHeight: 0,
+    width: '100%',
+    maxWidth: 1120,
+    alignSelf: 'center',
     backgroundColor: '#f4f5f7',
   },
   splashContainer: {

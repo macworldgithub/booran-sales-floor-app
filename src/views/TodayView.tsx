@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   RefreshControl,
+  useWindowDimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
@@ -17,10 +18,6 @@ import {
   Plus,
   ChevronRight,
   TrendingDown,
-  DollarSign,
-  Phone,
-  Sparkles,
-  ShieldCheck,
 } from 'lucide-react-native';
 import { Lead, Vehicle, ActionItem, Appointment, UnifiedSummary } from '../types';
 import { MetricCard } from '../components/common/MetricCard';
@@ -59,6 +56,9 @@ export function TodayView({
   onNavigateTab,
 }: TodayViewProps) {
   const { user, selectedRooftop } = useAuth();
+  const { width, fontScale } = useWindowDimensions();
+  const availableWidth = (Math.min(width, 1120) - 32) / fontScale;
+  const metricBasis = availableWidth >= 720 ? '22%' : availableWidth >= 320 ? '46%' : '100%';
 
   const totalLeadsCount = summary?.crm?.totalLeads ?? leads.length;
   const followUpCount = summary?.crm?.followingUp ?? 0;
@@ -87,6 +87,7 @@ export function TodayView({
 
   return (
     <ScrollView
+      testID="today-scroll"
       style={styles.container}
       contentContainerStyle={styles.content}
       refreshControl={
@@ -99,8 +100,6 @@ export function TodayView({
       }
       showsVerticalScrollIndicator={false}
     >
-      <PulseCard onOpenLead={onSelectLead} />
-      <DeliveryCentre onOpenLead={onSelectLead} />
       {/* Executive Command Banner */}
       <LinearGradient
         colors={['#171b22', '#232b38', '#12161c']}
@@ -112,14 +111,14 @@ export function TodayView({
           <View style={styles.liveTag}>
             <Text style={styles.liveTagText}>LIVE SALES FLOOR OS</Text>
           </View>
-          <Text style={styles.scopeText} numberOfLines={1}>
+          <Text style={styles.scopeText}>
             {scopeLabel}
           </Text>
         </View>
 
         <Text style={styles.bannerTitle}>Sales Floor Command</Text>
         <Text style={styles.bannerSubtitle}>
-          Real-time synchronization across <Text style={{ fontWeight: '700', color: '#ffffff' }}>flwup_crm</Text> ({totalLeadsCount.toLocaleString()} leads) and <Text style={{ fontWeight: '700', color: '#ffffff' }}>booran_inventory_tracker</Text> ({stockCount.toLocaleString()} units).
+          Your live overview of leads, showroom stock and dealership activity.
         </Text>
 
         <View style={styles.quickActionRow}>
@@ -145,42 +144,50 @@ export function TodayView({
 
       {/* KPI Metric Cards */}
       <View style={styles.metricsRow}>
-        <MetricCard
-          label="Active Pipeline"
-          value={totalLeadsCount}
-          change={`${followUpCount} following up`}
-          icon={Users}
-          tone="cyan"
-          onPress={() => onNavigateTab('leads')}
-        />
-        <MetricCard
-          label="Showroom Stock"
-          value={stockCount}
-          change="Live inventory units"
-          icon={Car}
-          tone="green"
-          onPress={() => onNavigateTab('inventory')}
-        />
+        <View style={[styles.metricSlot, { flexBasis: metricBasis }]}>
+          <MetricCard
+            label="Active Pipeline"
+            value={totalLeadsCount}
+            change={`${followUpCount} following up`}
+            icon={Users}
+            tone="cyan"
+            onPress={() => onNavigateTab('leads')}
+          />
+        </View>
+        <View style={[styles.metricSlot, { flexBasis: metricBasis }]}>
+          <MetricCard
+            label="Showroom Stock"
+            value={stockCount}
+            change="Live inventory units"
+            icon={Car}
+            tone="green"
+            onPress={() => onNavigateTab('inventory')}
+          />
+        </View>
+        <View style={[styles.metricSlot, { flexBasis: metricBasis }]}>
+          <MetricCard
+            label="Capital Radar"
+            value={openActionsCount}
+            change="Action items open"
+            icon={AlertTriangle}
+            tone="amber"
+            onPress={() => onNavigateTab('action-items')}
+          />
+        </View>
+        <View style={[styles.metricSlot, { flexBasis: metricBasis }]}>
+          <MetricCard
+            label="Aging Over 90d"
+            value={agingCount}
+            change="Requires manager review"
+            icon={TrendingDown}
+            tone="red"
+            onPress={() => onNavigateTab('inventory')}
+          />
+        </View>
       </View>
 
-      <View style={styles.metricsRow}>
-        <MetricCard
-          label="Capital Radar"
-          value={openActionsCount}
-          change="Action items open"
-          icon={AlertTriangle}
-          tone="amber"
-          onPress={() => onNavigateTab('action-items')}
-        />
-        <MetricCard
-          label="Aging Over 90d"
-          value={agingCount}
-          change="Requires manager review"
-          icon={TrendingDown}
-          tone="red"
-          onPress={() => onNavigateTab('inventory')}
-        />
-      </View>
+      <PulseCard onOpenLead={onSelectLead} />
+      <DeliveryCentre onOpenLead={onSelectLead} />
 
       {/* Today's Appointments Section */}
       <View style={styles.cardSection}>
@@ -211,7 +218,7 @@ export function TodayView({
                 </Text>
               </View>
 
-              <View style={{ flex: 1 }}>
+              <View style={styles.rowContent}>
                 <Text style={styles.apptProspect}>{appt.prospectName}</Text>
                 <Text style={styles.apptVehicle}>
                   {appt.vehicle || 'Vehicle Consultation'} · {appt.consultantName || 'Staff'}
@@ -234,7 +241,7 @@ export function TodayView({
             <Text style={styles.sectionTitle}>Urgent Leads Needing Contact</Text>
           </View>
           <TouchableOpacity onPress={() => onNavigateTab('leads')}>
-            <Text style={styles.viewAllLink}>Pipeline ({totalLeadsCount})</Text>
+            <Text style={styles.viewAllLink}>Pipeline ({totalLeadsCount.toLocaleString()})</Text>
           </TouchableOpacity>
         </View>
 
@@ -266,7 +273,7 @@ export function TodayView({
                   <Text style={styles.leadAvatarText}>{initials}</Text>
                 </View>
 
-                <View style={{ flex: 1 }}>
+                <View style={styles.leadContent}>
                   <View style={styles.leadTopLine}>
                     <Text style={styles.leadName}>{lead.name || lead.customer_name}</Text>
                     <View
@@ -310,7 +317,7 @@ export function TodayView({
             <Text style={styles.sectionTitle}>High Holding Cost Vehicles</Text>
           </View>
           <TouchableOpacity onPress={() => onNavigateTab('inventory')}>
-            <Text style={styles.viewAllLink}>Stock ({stockCount})</Text>
+            <Text style={styles.viewAllLink}>Stock ({stockCount.toLocaleString()})</Text>
           </TouchableOpacity>
         </View>
 
@@ -326,7 +333,7 @@ export function TodayView({
               style={styles.vehicleRow}
               activeOpacity={0.7}
             >
-              <View style={{ flex: 1 }}>
+              <View style={styles.rowContent}>
                 <View style={styles.vehicleTitleRow}>
                   <Text style={styles.vehicleTitle}>
                     {v.year} {v.make} {v.model} {v.variant || ''}
@@ -387,7 +394,7 @@ export function TodayView({
                 <Text style={styles.actionBadgeText}>{item.actionType}</Text>
               </View>
 
-              <View style={{ flex: 1 }}>
+              <View style={styles.rowContent}>
                 <Text style={styles.actionTitle}>{item.vehicleTitle}</Text>
                 <Text style={styles.actionReason}>{item.reason}</Text>
               </View>
@@ -407,24 +414,30 @@ const styles = StyleSheet.create({
     backgroundColor: '#f4f5f7',
   },
   content: {
-    padding: 12,
-    gap: 12,
-    paddingBottom: 24,
+    padding: 16,
+    gap: 16,
+    paddingBottom: 32,
+    width: '100%',
+    maxWidth: 1120,
+    alignSelf: 'center',
   },
   banner: {
+    backgroundColor: colors.graphite,
     borderRadius: 16,
-    padding: 16,
+    padding: 20,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
     ...shadows.md,
   },
   bannerBadgeRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     gap: 8,
     marginBottom: 8,
   },
   liveTag: {
+    maxWidth: '100%',
     backgroundColor: colors.signalRed,
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -439,10 +452,12 @@ const styles = StyleSheet.create({
   scopeText: {
     color: '#94a3b8',
     fontSize: 11,
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: 170,
+    flexShrink: 1,
   },
   bannerTitle: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '800',
     color: '#ffffff',
     letterSpacing: -0.5,
@@ -455,39 +470,62 @@ const styles = StyleSheet.create({
   },
   quickActionRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 10,
     marginTop: 14,
   },
   quickActionButton: {
+    flexGrow: 1,
+    flexBasis: 140,
+    minHeight: 44,
+    justifyContent: 'center',
     backgroundColor: colors.signalRed,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
     borderRadius: 8,
   },
   quickActionOutline: {
     backgroundColor: 'rgba(255, 255, 255, 0.12)',
   },
   quickActionText: {
+    flexShrink: 1,
     color: '#ffffff',
     fontSize: 12,
     fontWeight: '700',
   },
   metricsRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  metricSlot: {
+    flexGrow: 1,
+    minWidth: 0,
+  },
+  rowContent: {
+    flexGrow: 1,
+    flexBasis: 180,
+    minWidth: 0,
+  },
+  leadContent: {
+    flex: 1,
+    minWidth: 0,
   },
   cardSection: {
     backgroundColor: '#ffffff',
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    padding: 14,
+    padding: 16,
     ...shadows.sm,
   },
   sectionHeader: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
@@ -496,18 +534,21 @@ const styles = StyleSheet.create({
     borderBottomColor: '#f1f5f9',
   },
   sectionHeaderLeft: {
+    flexGrow: 1,
+    flexBasis: 200,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
   sectionTitle: {
-    fontSize: 13,
+    flex: 1,
+    fontSize: 14,
     fontWeight: '800',
     color: colors.textPrimary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
   viewAllLink: {
+    paddingVertical: 4,
     fontSize: 12,
     fontWeight: '700',
     color: colors.signalRed,
@@ -518,6 +559,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   emptyStateText: {
+    textAlign: 'center',
     fontSize: 12,
     color: colors.textSecondary,
     fontStyle: 'italic',
@@ -532,6 +574,7 @@ const styles = StyleSheet.create({
   },
   appointmentRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     gap: 10,
     paddingVertical: 9,
@@ -563,6 +606,7 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   typeBadge: {
+    maxWidth: '100%',
     backgroundColor: '#f1f5f9',
     paddingHorizontal: 6,
     paddingVertical: 3,
@@ -599,15 +643,21 @@ const styles = StyleSheet.create({
   },
   leadTopLine: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   leadName: {
+    flexGrow: 1,
+    flexBasis: 120,
+    flexShrink: 1,
     fontSize: 13,
     fontWeight: '700',
     color: colors.textPrimary,
   },
   leadStatusTag: {
+    maxWidth: '100%',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
@@ -623,6 +673,7 @@ const styles = StyleSheet.create({
   },
   vehicleRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 10,
@@ -635,6 +686,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   vehicleTitle: {
+    flexShrink: 1,
     fontSize: 13,
     fontWeight: '700',
     color: colors.textPrimary,
@@ -646,10 +698,12 @@ const styles = StyleSheet.create({
   },
   vehicleTagsRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 6,
     marginTop: 4,
   },
   agingPill: {
+    maxWidth: '100%',
     backgroundColor: '#fee2e2',
     paddingHorizontal: 6,
     paddingVertical: 2,
@@ -661,6 +715,7 @@ const styles = StyleSheet.create({
     color: colors.danger,
   },
   holdingPill: {
+    maxWidth: '100%',
     backgroundColor: '#fffbeb',
     paddingHorizontal: 6,
     paddingVertical: 2,
@@ -672,6 +727,7 @@ const styles = StyleSheet.create({
     color: colors.amber,
   },
   vehiclePriceCol: {
+    flexGrow: 1,
     alignItems: 'flex-end',
   },
   vehiclePrice: {
@@ -687,6 +743,7 @@ const styles = StyleSheet.create({
   },
   actionRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     gap: 10,
     paddingVertical: 9,
@@ -694,6 +751,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#f1f5f9',
   },
   actionBadge: {
+    maxWidth: '100%',
     backgroundColor: '#fffbeb',
     borderWidth: 1,
     borderColor: '#fde68a',

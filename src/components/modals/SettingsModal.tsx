@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Platform,
+  ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X, Server, Check } from 'lucide-react-native';
@@ -72,12 +73,12 @@ export function SettingsModal({ isOpen, onClose, onShowToast }: SettingsModalPro
               <Server size={18} color={colors.textPrimary} />
               <Text style={styles.title}>API & Backend Settings</Text>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel="Close API settings" onPress={onClose} style={styles.closeBtn}>
               <X size={20} color="#64748b" />
             </TouchableOpacity>
           </View>
 
-          <View style={styles.content}>
+          <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
             <Text style={styles.label}>BACKEND API URL (ENDING IN /api)</Text>
             <TextInput
               style={styles.input}
@@ -99,7 +100,7 @@ export function SettingsModal({ isOpen, onClose, onShowToast }: SettingsModalPro
                     onPress={() => setDraftUrl(preset.url)}
                     style={[styles.presetItem, isSelected && styles.presetItemSelected]}
                   >
-                    <View>
+                    <View style={{ flex: 1, minWidth: 0 }}>
                       <Text style={styles.presetLabel}>{preset.label}</Text>
                       <Text style={styles.presetUrl}>{preset.url}</Text>
                     </View>
@@ -113,7 +114,7 @@ export function SettingsModal({ isOpen, onClose, onShowToast }: SettingsModalPro
             <TouchableOpacity onPress={handleSave} disabled={saving} style={styles.saveBtn}>
               <Text style={styles.saveBtnText}>{saving ? 'Saving…' : 'Save & Apply Settings'}</Text>
             </TouchableOpacity>
-          </View>
+          </ScrollView>
         </View>
       </View>
     </Modal>
@@ -127,12 +128,17 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalSheet: {
+    width: '100%',
+    maxWidth: 760,
+    maxHeight: '90%',
+    alignSelf: 'center',
     backgroundColor: '#ffffff',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: 16,
   },
   sheetHeader: {
+    gap: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -141,11 +147,14 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.cardBorder,
   },
   headerLeft: {
+    flex: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
   title: {
+    flex: 1,
     fontSize: 16,
     fontWeight: '800',
     color: colors.textPrimary,
@@ -179,6 +188,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   presetItem: {
+    gap: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -198,6 +208,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   presetUrl: {
+    flexShrink: 1,
     fontSize: 11,
     color: colors.textSecondary,
     marginTop: 2,

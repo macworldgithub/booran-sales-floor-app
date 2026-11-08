@@ -264,6 +264,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   bannerTagRow: {
+    flexWrap: 'wrap',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -292,10 +293,12 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   actionButtonsRow: {
+    flexWrap: 'wrap',
     flexDirection: 'row',
     gap: 8,
   },
   syncBtn: {
+    maxWidth: '100%',
     backgroundColor: colors.signalRed,
     flexDirection: 'row',
     alignItems: 'center',
@@ -308,6 +311,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.graphite,
   },
   syncBtnText: {
+    flexShrink: 1,
     color: '#ffffff',
     fontSize: 12,
     fontWeight: '700',
@@ -376,6 +380,8 @@ const styles = StyleSheet.create({
     ...shadows.sm,
   },
   logCardHeader: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
@@ -405,6 +411,8 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   metricsGrid: {
+    flexWrap: 'wrap',
+    gap: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     backgroundColor: '#f8fafc',
@@ -413,10 +421,12 @@ const styles = StyleSheet.create({
     marginVertical: 8,
   },
   metricItem: {
+    flexBasis: 100,
     alignItems: 'center',
     flex: 1,
   },
   metricLabel: {
+    textAlign: 'center',
     fontSize: 8,
     fontWeight: '700',
     color: colors.textMuted,

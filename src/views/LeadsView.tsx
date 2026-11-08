@@ -440,6 +440,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#f4f5f7',
   },
   banner: {
+    flexWrap: 'wrap',
+    gap: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -451,8 +453,10 @@ const styles = StyleSheet.create({
   },
   bannerLeft: {
     flex: 1,
+    minWidth: 180,
   },
   bannerTagRow: {
+    flexWrap: 'wrap',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -504,10 +508,11 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    height: 40,
+    minHeight: 44,
     gap: 8,
   },
   searchInput: {
+    minWidth: 0,
     flex: 1,
     fontSize: 13,
     color: colors.textPrimary,
@@ -519,9 +524,11 @@ const styles = StyleSheet.create({
   },
   filtersScroll: {
     marginTop: 8,
-    maxHeight: 38,
+    flexGrow: 0,
   },
   filtersContent: {
+    alignItems: 'center',
+    paddingVertical: 4,
     paddingHorizontal: 12,
     gap: 6,
   },
@@ -610,11 +617,15 @@ const styles = StyleSheet.create({
     ...shadows.sm,
   },
   leadCardTop: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
   },
   leadInfoLeft: {
+    minWidth: 0,
+    flexBasis: 180,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
@@ -647,6 +658,7 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   statusBadge: {
+    maxWidth: '100%',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
@@ -677,12 +689,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   metaRow: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: 8,
   },
   consultantText: {
+    flexShrink: 1,
     fontSize: 11,
     color: colors.textSecondary,
   },
@@ -691,6 +706,7 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   actionsRow: {
+    flexWrap: 'wrap',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
@@ -700,6 +716,8 @@ const styles = StyleSheet.create({
     borderTopColor: '#f1f5f9',
   },
   actionChip: {
+    minHeight: 36,
+    maxWidth: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,

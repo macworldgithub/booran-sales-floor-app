@@ -44,6 +44,23 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Allow Booran Sales Floor to capture vehicle inspection and completion photos.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Allow $(PRODUCT_NAME) to access your location</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Allow $(PRODUCT_NAME) to access your location</string>
+	<key>NSLocationTemporaryUsageDescriptionDictionary</key>
+	<dict>
+		<key>ExpoLocationFullAccuracy</key>
+		<string>Allow $(PRODUCT_NAME) to access your precise location</string>
+	</dict>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Allow Booran Sales Floor to verify your dealership check-in and accessory completion.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>Allow $(PRODUCT_NAME) to detect your current motion activity</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Allow Booran Sales Floor to attach customer photos and videos.</string>
 	<key>RCTMetroPort</key>
 	<string>$(RCT_METRO_PORT)</string>
 	<key>RCTNewArchEnabled</key>
@@ -75,12 +92,6 @@
 	<false/>
 	<key>UIStatusBarStyle</key>
 	<string>UIStatusBarStyleDefault</string>
-	<key>NSCameraUsageDescription</key>
-	<string>Allow Booran Sales Floor to capture vehicle inspection and completion photos.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Allow Booran Sales Floor to attach customer photos and videos.</string>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Allow Booran Sales Floor to verify your dealership check-in and accessory completion.</string>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

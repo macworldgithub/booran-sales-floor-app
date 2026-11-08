@@ -137,11 +137,11 @@ export function BookTestDriveModal({
         >
           {/* Header */}
           <View style={styles.sheetHeader}>
-            <View>
+            <View style={styles.sheetHeading}>
               <Text style={styles.title}>Book Floor Appointment</Text>
               <Text style={styles.subtitle}>Test Drive & Showroom Scheduler</Text>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel="Close appointment form" onPress={onClose} style={styles.closeBtn}>
               <X size={20} color="#64748b" />
             </TouchableOpacity>
           </View>
@@ -314,6 +314,9 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalSheet: {
+    width: '100%',
+    maxWidth: 760,
+    alignSelf: 'center',
     backgroundColor: '#ffffff',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
@@ -321,6 +324,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   sheetHeader: {
+    gap: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -338,6 +342,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: 2,
   },
+  sheetHeading: { flex: 1, minWidth: 0 },
   closeBtn: {
     padding: 8,
     borderRadius: 16,

@@ -131,7 +131,7 @@ export function Customer360Modal({
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>{initials}</Text>
               </View>
-              <View>
+              <View style={styles.headerDetails}>
                 <Text style={styles.leadName} numberOfLines={1}>
                   {lead.name || lead.customer_name || 'Prospect Profile'}
                 </Text>
@@ -140,7 +140,7 @@ export function Customer360Modal({
                 </Text>
               </View>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel="Close customer profile" onPress={onClose} style={styles.closeBtn}>
               <X size={20} color="#64748b" />
             </TouchableOpacity>
           </View>
@@ -341,6 +341,9 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalSheet: {
+    width: '100%',
+    maxWidth: 760,
+    alignSelf: 'center',
     backgroundColor: '#f4f5f7',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
@@ -348,6 +351,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   sheetHeader: {
+    gap: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -356,12 +360,14 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.cardBorder,
   },
   headerLeft: {
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     flex: 1,
   },
   avatar: {
+    flexShrink: 0,
     width: 44,
     height: 44,
     borderRadius: 22,
@@ -379,6 +385,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: colors.textPrimary,
   },
+  headerDetails: { flex: 1, minWidth: 0 },
   leadDealership: {
     fontSize: 12,
     color: colors.textSecondary,
@@ -445,7 +452,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   metaCell: {
-    width: '46%',
+    flexBasis: 140,
+    flexGrow: 1,
+    minWidth: 0,
   },
   metaLabel: {
     fontSize: 10,

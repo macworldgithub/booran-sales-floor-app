@@ -1,11 +1,13 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { AppState, Share, Text, View } from 'react-native';
+import { AppState, Share, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { ChevronRight } from 'lucide-react-native';
 import * as Location from 'expo-location';
 import { useAuth } from '../../context/AuthContext';
 import { leadApi } from '../../services/api';
 import { Pulse, Task, workflows } from '../../services/workflows';
 import { Lead } from '../../types';
-import { WorkflowButton, WorkflowField, workflowStyles as styles } from './WorkflowControls';
+import { WorkflowButton, WorkflowField, workflowStyles } from './WorkflowControls';
+import { colors } from '../../theme/theme';
 
 const periods = [['today', 'Today'], ['week', 'Weekly'], ['month', 'Month to date']];
 const metrics: { field: keyof Pulse; label: string; suffix?: string }[] = [
@@ -25,6 +27,8 @@ export async function currentLocation() {
 
 export function PulseCard({ onOpenLead }: { onOpenLead: (lead: Lead) => void }) {
   const { user, selectedRooftop, locations } = useAuth();
+  const { width, fontScale } = useWindowDimensions();
+  const metricBasis = fontScale > 1.5 ? '100%' : width / fontScale >= 768 ? '22%' : '46%';
   const [period, setPeriod] = useState('today');
   const [staff, setStaff] = useState('');
   const [pulse, setPulse] = useState<Pulse | null>(null);
@@ -102,25 +106,47 @@ export function PulseCard({ onOpenLead }: { onOpenLead: (lead: Lead) => void }) 
   });
 
   return <View style={styles.card}>
-    <Text style={styles.title}>{user?.canAllocate ? 'Good morning · PULSE' : 'My sales summary'}</Text>
-    <View style={styles.row}>{periods.map(([id, label]) => <WorkflowButton key={id} label={label} disabled={period === id} onPress={() => setPeriod(id)} />)}</View>
+    <View style={styles.heading}>
+      <Text style={styles.eyebrow}>PERFORMANCE OVERVIEW</Text>
+      <Text style={styles.title}>{user?.canAllocate ? 'PULSE sales summary' : 'My sales summary'}</Text>
+    </View>
+    <View style={styles.row}>{periods.map(([id, label]) => <WorkflowButton key={id} label={label} selected={period === id} disabled={period === id} onPress={() => setPeriod(id)} />)}</View>
     {user?.canAllocate && !!team.length && <View style={styles.row}>
-      <WorkflowButton label="Whole team" disabled={!staff} onPress={() => setStaff('')} />
-      {team.map(person => <WorkflowButton key={person.id} label={person.name} disabled={staff === person.id} onPress={() => setStaff(person.id)} />)}
+      <WorkflowButton label="Whole team" selected={!staff} disabled={!staff} onPress={() => setStaff('')} />
+      {team.map(person => <WorkflowButton key={person.id} label={person.name} selected={staff === person.id} disabled={staff === person.id} onPress={() => setStaff(person.id)} />)}
     </View>}
     {pulse ? <>
-      {metrics.map(({ field, label, suffix }) => <Text key={field} style={styles.text}>{label} · {String(pulse[field])}{suffix || ''}</Text>)}
+      <View style={styles.metricGrid}>
+        {metrics.map(({ field, label, suffix }) => <View key={field} style={[styles.metricTile, { flexBasis: metricBasis }]}>
+          <Text style={[styles.metricLabel, { minHeight: 34 * fontScale }]}>{label}</Text>
+          <Text style={styles.metricValue}>{typeof pulse[field] === 'number' ? pulse[field].toLocaleString() : String(pulse[field] ?? '—')}{suffix || ''}</Text>
+        </View>)}
+      </View>
       {user?.canAllocate && <>
-        <Text style={styles.text}>Follow-up {pulse.signals.followUp} · Conversion {pulse.signals.conversion}</Text>
+        <View style={styles.row}>
+          <Text style={styles.signal}>Follow-up · {pulse.signals.followUp}</Text>
+          <Text style={styles.signal}>Conversion · {pulse.signals.conversion}</Text>
+        </View>
         {pulse.sites?.length > 1 && <View style={styles.group}>
           <Text style={styles.label}>Dealership comparison</Text>
-          {pulse.sites.map(item => <Text key={item.name} style={styles.text}>{item.name} · {item.leads} leads · {item.sales} sold</Text>)}
+          {pulse.sites.map(item => <View key={item.name} style={styles.comparisonRow}>
+            <Text style={styles.comparisonName}>{item.name}</Text>
+            <Text style={styles.comparisonValue}>{item.leads.toLocaleString()} leads · {item.sales.toLocaleString()} sold</Text>
+          </View>)}
         </View>}
         {!!pulse.models?.length && <Text style={styles.text}>Model mix · {pulse.models.map(item => `${item.name} (${item.sales})`).join(', ')}</Text>}
         <WorkflowButton label="Share CSV report" disabled={busy} onPress={exportPulse} />
       </>}
-      {!!pulse.attention.length && <Text style={styles.label}>Follow-up attention</Text>}
-      {pulse.attention.map(item => <WorkflowButton key={item.id} label={`${item.name} · ${item.owner || 'Unassigned'}`} disabled={busy} onPress={() => openLead(item.id)} />)}
+      {!!pulse.attention.length && <View style={styles.group}>
+        <Text style={styles.label}>Follow-up attention ({pulse.attention.length})</Text>
+        {pulse.attention.map(item => <TouchableOpacity key={item.id} accessibilityRole="button" disabled={busy} onPress={() => openLead(item.id)} style={[styles.attentionRow, busy && styles.busy]}>
+          <View style={styles.attentionContent}>
+            <Text style={styles.attentionName}>{item.name}</Text>
+            <Text style={styles.attentionOwner}>{item.owner || 'Unassigned'}</Text>
+          </View>
+          <ChevronRight size={16} color={colors.textMuted} />
+        </TouchableOpacity>)}
+      </View>}
     </> : <Text style={styles.text}>Loading sales summary…</Text>}
     {!!tasks.length && <Text style={styles.label}>Follow-up tasks</Text>}
     {tasks.map(task => <View key={task._id} style={styles.group}>
@@ -166,3 +192,25 @@ export function PulseCard({ onOpenLead }: { onOpenLead: (lead: Lead) => void }) 
     {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
   </View>;
 }
+
+const styles = {
+  ...workflowStyles,
+  ...StyleSheet.create({
+    card: { ...workflowStyles.card, marginVertical: 0, gap: 14 },
+    heading: { gap: 4 },
+    eyebrow: { color: colors.textMuted, fontSize: 10, fontWeight: '800', letterSpacing: 1 },
+    metricGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    metricTile: { flexGrow: 1, minWidth: 0, backgroundColor: colors.cardAlt, borderWidth: 1, borderColor: '#edf1f5', borderRadius: 12, padding: 12, gap: 6 },
+    metricLabel: { color: colors.textSecondary, fontSize: 12, lineHeight: 17, minHeight: 34 },
+    metricValue: { color: colors.textPrimary, fontSize: 23, fontWeight: '800', fontVariant: ['tabular-nums'], flexShrink: 1 },
+    signal: { color: colors.textSecondary, backgroundColor: colors.slateLight, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 6, fontSize: 12, flexShrink: 1, textTransform: 'capitalize' },
+    comparisonRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6, paddingVertical: 6 },
+    comparisonName: { flexGrow: 1, flexBasis: 150, flexShrink: 1, fontSize: 13, lineHeight: 19, color: colors.textPrimary },
+    comparisonValue: { fontSize: 12, lineHeight: 18, color: colors.textSecondary, flexShrink: 1 },
+    attentionRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.slateLight, minHeight: 48 },
+    attentionContent: { flex: 1, minWidth: 0, gap: 3 },
+    attentionName: { fontSize: 13, fontWeight: '700', color: colors.textPrimary, flexShrink: 1 },
+    attentionOwner: { fontSize: 12, color: colors.textSecondary },
+    busy: { opacity: 0.5 },
+  }),
+};

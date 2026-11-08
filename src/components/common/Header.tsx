@@ -8,6 +8,7 @@ import {
   ScrollView,
   StyleSheet,
   ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -47,6 +48,7 @@ export function Header({
   unreadNotifications = false,
 }: HeaderProps) {
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const { user, selectedRooftop } = useAuth();
 
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
@@ -97,21 +99,26 @@ export function Header({
           styles.container,
           {
             paddingTop: Math.max(insets.top, 10),
+            paddingLeft: Math.max(insets.left, 12),
+            paddingRight: Math.max(insets.right, 12),
           },
         ]}
       >
         <View style={styles.topRow}>
           {/* Logo & Dealership pill */}
           <View style={styles.leftSection}>
-            <TouchableOpacity onPress={onOpenMobileNav} style={styles.menuButton}>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel="Open navigation" onPress={onOpenMobileNav} style={styles.menuButton}>
               <Menu size={22} color="#ffffff" />
             </TouchableOpacity>
-            <BooranLogo height={24} />
+            <BooranLogo height={width < 360 ? 18 : 24} />
           </View>
 
           {/* Right Action Icons */}
           <View style={styles.rightSection}>
             <TouchableOpacity
+              testID="header-search"
+              accessibilityRole="button"
+              accessibilityLabel="Search the sales floor"
               onPress={() => setIsSearchModalOpen(true)}
               style={styles.actionIcon}
             >
@@ -119,6 +126,9 @@ export function Header({
             </TouchableOpacity>
 
             <TouchableOpacity
+              testID="header-add-prospect"
+              accessibilityRole="button"
+              accessibilityLabel="Add prospect"
               onPress={onOpenAddProspect}
               style={[styles.actionIcon, styles.plusButton]}
             >
@@ -126,6 +136,9 @@ export function Header({
             </TouchableOpacity>
 
             <TouchableOpacity
+              testID="header-notifications"
+              accessibilityRole="button"
+              accessibilityLabel="Open notifications"
               onPress={onOpenNotifications}
               style={styles.actionIcon}
             >
@@ -323,30 +336,36 @@ const styles = StyleSheet.create({
     ...shadows.sm,
   },
   topRow: {
+    gap: 10,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 4,
   },
   leftSection: {
+    minWidth: 0,
+    flexShrink: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 8,
   },
   menuButton: {
-    padding: 6,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderRadius: 8,
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
   },
   rightSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   actionIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -367,12 +386,15 @@ const styles = StyleSheet.create({
     borderColor: '#171b22',
   },
   subBar: {
+    gap: 8,
+    flexWrap: 'wrap',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: 6,
   },
   dealershipBadge: {
+    flexShrink: 1,
     backgroundColor: 'rgba(255, 255, 255, 0.06)',
     paddingVertical: 3,
     paddingHorizontal: 8,
@@ -413,20 +435,22 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   searchInputWrapper: {
+    minWidth: 0,
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f1f5f9',
     borderRadius: 10,
     paddingHorizontal: 10,
-    height: 40,
+    minHeight: 44,
     gap: 8,
   },
   searchInput: {
+    minWidth: 0,
     flex: 1,
     fontSize: 14,
     color: colors.textPrimary,
-    height: '100%',
+    minHeight: 44,
   },
   cancelSearchButton: {
     paddingVertical: 6,
