@@ -23,6 +23,7 @@ import { Lead, Vehicle, ActionItem, Appointment, UnifiedSummary } from '../types
 import { MetricCard } from '../components/common/MetricCard';
 import { colors, shadows } from '../theme/theme';
 import { useAuth } from '../context/AuthContext';
+import { DailyOversight } from '../components/common/DailyOversight';
 import { PulseCard } from '../components/common/PulseCard';
 import { DeliveryCentre } from '../components/common/DeliveryCentre';
 
@@ -186,6 +187,7 @@ export function TodayView({
         </View>
       </View>
 
+      {(user?.canAllocate || user?.role === 'sales_consultant') && <DailyOversight key={selectedRooftop} onOpenLead={onSelectLead} refreshKey={isLoading} />}
       <PulseCard onOpenLead={onSelectLead} />
       <DeliveryCentre onOpenLead={onSelectLead} />
 

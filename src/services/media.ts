@@ -9,20 +9,20 @@ const typeByExtension: Record<string, string> = {
   mov: 'video/quicktime', webm: 'video/webm',
 };
 
-export async function uploadMedia(leadId: string, asset: ImagePickerAsset, purpose?: 'inspection' | 'licence') {
+export async function uploadMedia(leadId: string, asset: ImagePickerAsset, purpose?: 'inspection' | 'licence', recorded = false) {
   const file = new File(asset.uri);
   const name = asset.fileName || file.name;
   const contentType = asset.mimeType || typeByExtension[name.split('.').at(-1)?.toLowerCase() || ''];
   if (!contentType) throw new Error('Choose a supported photo or video.');
-  if (contentType.startsWith('video/') && (!asset.duration || asset.duration > 180000)) {
-    throw new Error('Choose a video with a known duration of three minutes or less.');
+  if (contentType.startsWith('video/') && (asset.duration ? asset.duration > 180000 : !recorded)) {
+    throw new Error('Choose a video of three minutes or less.');
   }
   const path = `/leads/${encodeURIComponent(leadId)}/media`;
   const prepared = await fetchApi<{ id: string; upload: { chunk_size: number } }>(path, {
     method: 'POST',
     body: JSON.stringify({
       name, content_type: contentType, size: file.size,
-      duration_ms: asset.duration ?? undefined, visibility: purpose ? 'private' : undefined, purpose,
+      duration_ms: asset.duration || undefined, visibility: purpose ? 'private' : undefined, purpose, recorded,
     }),
   });
   if (!prepared.data) throw new Error('Unable to start the upload.');

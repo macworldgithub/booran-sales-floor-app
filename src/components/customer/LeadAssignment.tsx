@@ -6,8 +6,8 @@ import { colors } from '../../theme/theme';
 
 type Assignee = { id: string; name: string; email: string };
 
-export function LeadAssignment({ lead, onUpdated }: { lead: Lead; onUpdated: (lead: Lead) => void }) {
-  const [open, setOpen] = useState(false);
+export function LeadAssignment({ lead, onUpdated, quick = false }: { lead: Lead; onUpdated: (lead: Lead) => void; quick?: boolean }) {
+  const [open, setOpen] = useState(quick);
   const [assignees, setAssignees] = useState<Assignee[] | null>(null);
   const [search, setSearch] = useState('');
   const [saving, setSaving] = useState(false);
@@ -48,16 +48,16 @@ export function LeadAssignment({ lead, onUpdated }: { lead: Lead; onUpdated: (le
 
   return (
     <View style={styles.section}>
-      <TouchableOpacity disabled={saving} onPress={() => { setOpen(!open); setError(''); }} accessibilityRole="button">
+      {!quick && <TouchableOpacity disabled={saving} onPress={() => { setOpen(!open); setError(''); }} accessibilityRole="button">
         <Text style={styles.link}>{open ? 'Close allocation' : 'Allocate lead'}</Text>
-      </TouchableOpacity>
+      </TouchableOpacity>}
       {open && <>
         <TextInput value={search} onChangeText={setSearch} placeholder="Find staff by name or email" style={styles.input} autoCapitalize="none" />
         {lead.owner_id || lead.owner_name !== 'Unassigned' ? (
           <TouchableOpacity disabled={saving} onPress={() => assign(null)}><Text style={styles.option}>Return to unassigned queue</Text></TouchableOpacity>
         ) : null}
         {matches.slice(0, 12).map(person => (
-          <TouchableOpacity key={person.id} disabled={saving || lead.owner_id === person.id} onPress={() => assign(person.id)}>
+          <TouchableOpacity key={person.id} accessibilityRole="button" accessibilityLabel={`Assign to ${person.name}`} disabled={saving || lead.owner_id === person.id} onPress={() => assign(person.id)}>
             <Text style={styles.option}>{person.name} · {person.email}{lead.owner_id === person.id ? ' (assigned)' : ''}</Text>
           </TouchableOpacity>
         ))}

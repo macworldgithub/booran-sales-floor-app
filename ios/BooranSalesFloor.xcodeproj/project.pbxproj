@@ -22,7 +22,7 @@
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = BooranSalesFloor/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = BooranSalesFloor/Info.plist; sourceTree = "<group>"; };
 		3585CF41378FB5759CE82EC6 /* Pods-BooranSalesFloor.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-BooranSalesFloor.release.xcconfig"; path = "Target Support Files/Pods-BooranSalesFloor/Pods-BooranSalesFloor.release.xcconfig"; sourceTree = "<group>"; };
-		48CD0DB2220436D468E5FE68 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = BooranSalesFloor/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		48CD0DB2220436D468E5FE68 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = BooranSalesFloor/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		5ED76561FAD322C2289FB88F /* libPods-BooranSalesFloor.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-BooranSalesFloor.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = BooranSalesFloor/SplashScreen.storyboard; sourceTree = "<group>"; };
 		AB6468A19DDBB9780C79765B /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-BooranSalesFloor/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
@@ -67,7 +67,6 @@
 				F07D774D81DFDC51EB96DFCD /* Pods-BooranSalesFloor.debug.xcconfig */,
 				3585CF41378FB5759CE82EC6 /* Pods-BooranSalesFloor.release.xcconfig */,
 			);
-			name = Pods;
 			path = Pods;
 			sourceTree = "<group>";
 		};
@@ -361,6 +360,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = BooranSalesFloor/BooranSalesFloor.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 99LD8329J6;
 				ENABLE_BITCODE = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
@@ -398,6 +398,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = BooranSalesFloor/BooranSalesFloor.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 99LD8329J6;
 				INFOPLIST_FILE = BooranSalesFloor/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.4;
 				LD_RUNPATH_SEARCH_PATHS = (

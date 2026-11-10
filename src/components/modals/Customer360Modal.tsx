@@ -28,8 +28,10 @@ import { Lead } from '../../types';
 import { leadApi } from '../../services/api';
 import { CustomerPhoneEditor } from '../customer/CustomerPhoneEditor';
 import { CustomerMessages } from '../customer/CustomerMessages';
+import { LeadProcess } from '../customer/LeadProcess';
 import { LeadAssignment } from '../customer/LeadAssignment';
 import { CustomerWorkflows } from '../customer/CustomerWorkflows';
+import { WorkflowButton, WorkflowField, workflowStyles } from '../common/WorkflowControls';
 import { colors, shadows } from '../../theme/theme';
 import { useAuth } from '../../context/AuthContext';
 
@@ -69,7 +71,7 @@ export function Customer360Modal({
     { id: 'new_lead', label: 'New Lead', color: '#2563eb', bg: '#eff6ff' },
     { id: 'following_up', label: 'Following Up', color: '#d97706', bg: '#fffbeb' },
     { id: 'sold', label: 'Sold', color: '#059669', bg: '#ecfdf5' },
-    { id: 'lost', label: 'Lost', color: '#64748b', bg: '#f1f5f9' },
+
   ];
 
   const handleStatusChange = async (newStatus: string) => {
@@ -163,7 +165,7 @@ export function Customer360Modal({
                     <TouchableOpacity
                       key={opt.id}
                       onPress={() => handleStatusChange(opt.id)}
-                      disabled={isUpdatingStatus}
+                      disabled={isUpdatingStatus || lead.loss_review?.status === 'pending'}
                       style={[
                         styles.statusPill,
                         { borderColor: opt.color },
@@ -218,6 +220,7 @@ export function Customer360Modal({
                 </View>
               </View>
 
+              <CustomerDetails key={lead._id} lead={lead} onUpdated={updated => onLeadUpdated?.(updated)} />
               {user?.canAllocate && <LeadAssignment key={lead._id} lead={lead} onUpdated={updated => onLeadUpdated?.(updated)} />}
               {!!lead.business_name && <Text style={styles.metaValue}>{lead.business_name}</Text>}
               {lead.source && (
@@ -226,6 +229,7 @@ export function Customer360Modal({
                 </View>
               )}
               {!!lead.source_comments && <Text style={styles.metaValue}>{lead.source_comments}</Text>}
+              {lead.external && <Text style={styles.metaValue}>{lead.source} reference {lead.external.id}{lead.external.opportunity_status ? ` · ${lead.external.opportunity_status}` : ''}{!lead.external.details_revealed && !lead.phone ? ' · Contact details pending' : ''}</Text>}
             </View>
 
             {/* Test Drive Action Card */}
@@ -270,6 +274,7 @@ export function Customer360Modal({
               </View>
             )}
 
+            <LeadProcess key={`process-${lead._id}`} lead={lead} onUpdated={updated => onLeadUpdated?.(updated)} />
             {/* Customer SMS Communications */}
             <CustomerMessages key={lead._id} lead={lead} />
             <CustomerWorkflows key={`workflows-${lead._id}`} lead={lead}
@@ -332,6 +337,33 @@ export function Customer360Modal({
       </View>
     </Modal>
   );
+}
+
+function CustomerDetails({ lead, onUpdated }: { lead: Lead; onUpdated: (lead: Lead) => void }) {
+  const values = { customer_name: lead.name || '', customer_email: lead.email || '', vehicle_make: lead.make || '', vehicle_model: lead.model || '' };
+  const [form, setForm] = useState(values);
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  return <View style={workflowStyles.group}>
+    <WorkflowButton label={open ? 'Cancel editing' : 'Edit customer details'} disabled={busy} onPress={() => { setForm(values); setOpen(!open); setError(''); }} />
+    {open && <>
+      {([['customer_name', 'Customer name'], ['customer_email', 'Email'], ['vehicle_make', 'Vehicle make'], ['vehicle_model', 'Vehicle model / interest']] as const).map(([key, label]) =>
+        <WorkflowField key={key} label={label} value={form[key]} onChangeText={text => setForm(previous => ({ ...previous, [key]: text }))} />)}
+      {!!error && <Text accessibilityRole="alert" style={workflowStyles.error}>{error}</Text>}
+      <WorkflowButton label={busy ? 'Saving…' : 'Save details'} disabled={busy || !form.customer_name.trim()} onPress={async () => {
+        const changes = Object.fromEntries((Object.keys(form) as (keyof typeof form)[]).filter(key => form[key].trim() !== values[key]).map(key => [key, form[key].trim()]));
+        if (!Object.keys(changes).length) { setOpen(false); return; }
+        setBusy(true); setError('');
+        try {
+          const result = await leadApi.updateLead(lead._id, changes);
+          if (result.data) onUpdated(result.data);
+          setOpen(false);
+        } catch (reason) { setError((reason as Error).message); }
+        finally { setBusy(false); }
+      }} />
+    </>}
+  </View>;
 }
 
 const styles = StyleSheet.create({

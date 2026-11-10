@@ -1,4 +1,9 @@
 export interface CustomerMedia {
+  status?: 'ready' | 'processing' | 'rendering' | 'processing_failed';
+  processing_error?: string;
+  views?: number;
+  reviews?: number;
+  branded?: boolean;
   id: string;
   name: string;
   content_type: string;
@@ -27,11 +32,20 @@ export interface CustomerMessageHistory {
   ai_enabled?: boolean;
   ai_resume_hours?: number;
   media_available: boolean;
+  recording_available?: boolean;
   media_unavailable_reason?: string;
   history_warning?: string;
 }
 
 export interface Lead {
+  quick_walk_in?: boolean;
+  overdue?: boolean;
+  last_activity_at?: string;
+  followup_days?: string[];
+  next_action?: { title: string; due_at: string; recorded_at: string; author: string } | null;
+  loss_review?: { id: string; status: 'pending' | 'approved' | 'returned'; reason: string; requested_name: string; requested_at: string; notes?: string; last_action?: string; reviewed_name?: string };
+  external?: { id: string; source: string; opportunity_status?: string; details_revealed?: boolean };
+
   _id: string;
   id?: string;
   deal_id?: string;

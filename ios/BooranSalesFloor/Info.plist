@@ -45,7 +45,9 @@
 		<true/>
 	</dict>
 	<key>NSCameraUsageDescription</key>
-	<string>Allow Booran Sales Floor to capture vehicle inspection and completion photos.</string>
+	<string>Allow Booran Sales Floor to capture customer videos and vehicle photos.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Allow Booran Sales Floor to record audio in customer videos.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Allow $(PRODUCT_NAME) to access your location</string>
 	<key>NSLocationAlwaysUsageDescription</key>

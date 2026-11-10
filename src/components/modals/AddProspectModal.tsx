@@ -36,6 +36,7 @@ export function AddProspectModal({
   const insets = useSafeAreaInsets();
   const { user, locations, selectedRooftop } = useAuth();
 
+  const [quick, setQuick] = useState(false);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -83,8 +84,8 @@ export function AddProspectModal({
   ];
 
   const handleSubmit = async () => {
-    if (!name.trim() || !phone.trim() || !email.trim()) {
-      setError('Provide the customer’s full name, mobile and email.');
+    if (quick ? !notes.trim() : (!name.trim() || !phone.trim() || !email.trim())) {
+      setError(quick ? 'Describe the walk-in so a salesperson can identify them.' : 'Provide the customer’s full name, mobile and email.');
       return;
     }
     if (!dealership) {
@@ -97,8 +98,9 @@ export function AddProspectModal({
     try {
       const vehicleDesc = `${vehicleMake} ${vehicleModel}`.trim();
       const payload: Partial<Lead> = {
-        name: name.trim(),
-        customer_name: name.trim(),
+        quick_walk_in: quick,
+        name: name.trim() || 'Walk-in — details pending',
+        customer_name: name.trim() || 'Walk-in — details pending',
         phone: phone.trim(),
         customer_phone: phone.trim(),
         email: email.trim().toLowerCase(),
@@ -177,6 +179,7 @@ export function AddProspectModal({
           )}
 
           <ScrollView style={styles.formScroll} showsVerticalScrollIndicator={false}>
+            {user?.canAllocate && <View style={{ marginBottom: 16, gap: 8 }}><WorkflowButton label={quick ? 'Quick walk-in log enabled' : 'Quick walk-in: details later'} selected={quick} onPress={() => setQuick(!quick)} />{quick && <Text style={{ color: colors.textSecondary }}>Describe the customer in Notes. Creates a red, unassigned lead for allocation; the salesperson completes the profile.</Text>}</View>}
             {/* Full Name */}
             <View style={styles.formGroup}>
               <Text style={styles.fieldLabel}>FULL NAME *</Text>

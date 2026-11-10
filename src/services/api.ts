@@ -223,7 +223,8 @@ export const leadApi = {
 export const customerMessageApi = {
   history: (id: string, page = 1) =>
     fetchApi<CustomerMessageHistory>(`/leads/${encodeURIComponent(id)}/messages?page=${page}`),
-  media: (id: string) => fetchApi<CustomerMedia[]>(`/leads/${encodeURIComponent(id)}/media`),
+  media: (id: string) => fetchApi<CustomerMedia[]>(`/leads/${encodeURIComponent(id)}/media?includeProcessing=true`),
+  completeMedia: (id: string, mediaId: string) => fetchApi<CustomerMedia>(`/leads/${encodeURIComponent(id)}/media/${encodeURIComponent(mediaId)}/complete`, { method: 'POST', body: '{}' }),
   send: (id: string, data: { body: string; media_ids: string[]; request_id: string }) =>
     fetchApi<CustomerMessage>(`/leads/${encodeURIComponent(id)}/messages`, {
       method: 'POST',

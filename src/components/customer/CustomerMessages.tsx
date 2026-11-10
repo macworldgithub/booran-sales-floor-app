@@ -32,7 +32,10 @@ export function CustomerMessages({ lead, disabled = false }: CustomerMessagesPro
   const [isSending, setIsSending] = useState(false);
   const [smsAvailable, setSmsAvailable] = useState(true);
   const [mediaAvailable, setMediaAvailable] = useState(false);
+  const [recordingAvailable, setRecordingAvailable] = useState(false);
   const [attachments, setAttachments] = useState<CustomerMedia[]>([]);
+  const [mediaLibrary, setMediaLibrary] = useState<CustomerMedia[]>([]);
+  const [showMedia, setShowMedia] = useState(false);
   const [isUploading, setUploading] = useState(false);
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
@@ -43,6 +46,7 @@ export function CustomerMessages({ lead, disabled = false }: CustomerMessagesPro
   const [drafting, setDrafting] = useState(false);
   const [confirmingSend, setConfirmingSend] = useState(false);
   const attempt = useRef<{ body: string; media_ids: string[]; request_id: string } | null>(null);
+  const uploadPending = useRef(false);
   const loadVersion = useRef(0);
 
   const phone = lead.phone || lead.customer_phone || '';
@@ -57,6 +61,7 @@ export function CustomerMessages({ lead, disabled = false }: CustomerMessagesPro
         setMessages(res.data.messages || []);
         setSmsAvailable(res.data.sms_available ?? true);
         setMediaAvailable(res.data.media_available);
+        setRecordingAvailable(Boolean(res.data.recording_available));
         setAiEnabled(Boolean(res.data.ai_enabled));
         setResumeHours(res.data.ai_resume_hours || 0);
         setWarning(res.data.history_warning || '');
@@ -78,19 +83,42 @@ export function CustomerMessages({ lead, disabled = false }: CustomerMessagesPro
     return () => { clearInterval(timer); loadVersion.current++; };
   }, [loadHistory]);
 
-  const chooseMedia = async () => {
-    if (isUploading || attempt.current) return;
+  useEffect(() => {
+    if (!showMedia) return;
+    let active = true;
+    const refresh = async () => {
+      try {
+        const result = await customerMessageApi.media(lead._id);
+        if (active && result.data) setMediaLibrary(result.data);
+      } catch (reason) {
+        if (active) setError((reason as Error).message);
+      }
+    };
+    void refresh();
+    const timer = setInterval(() => { if (AppState.currentState === 'active') void refresh(); }, 5000);
+    return () => { active = false; clearInterval(timer); };
+  }, [lead._id, showMedia]);
+
+  const chooseMedia = async (recorded = false) => {
+    if (uploadPending.current || attempt.current || disabled || attachments.length >= 5) return;
+    uploadPending.current = true;
     setUploading(true);
     setError(null);
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images', 'videos'], quality: 0.8 });
+      if (recorded && !(await ImagePicker.requestCameraPermissionsAsync()).granted) throw new Error('Allow camera access to record a customer video.');
+      const result = recorded
+        ? await ImagePicker.launchCameraAsync({ mediaTypes: ['videos'], videoMaxDuration: 180, quality: 0.7 })
+        : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images', 'videos'], quality: 0.8 });
       if (!result.canceled) {
-        const media = await uploadMedia(lead._id, result.assets[0]);
-        setAttachments(previous => [...previous, media]);
+        const media = await uploadMedia(lead._id, result.assets[0], undefined, recorded);
+        setMediaLibrary(previous => [media, ...previous.filter(item => item.id !== media.id)]);
+        if (!media.status || media.status === 'ready') setAttachments(previous => [...previous, media]);
+        if (recorded || media.status === 'processing' || media.status === 'rendering') setShowMedia(true);
       }
     } catch (reason) {
       setError((reason as Error).message);
     } finally {
+      uploadPending.current = false;
       setUploading(false);
     }
   };
@@ -252,6 +280,28 @@ export function CustomerMessages({ lead, disabled = false }: CustomerMessagesPro
           <Text style={styles.statusText}>{media.name} · Remove</Text>
         </TouchableOpacity>
       ))}
+      {mediaAvailable && <View style={{ paddingHorizontal: 10, paddingVertical: 6, gap: 6 }}>
+        <View style={workflowStyles.row}>
+          {recordingAvailable && <WorkflowButton label={isUploading ? 'Uploading…' : 'Record customer video'} disabled={disabled || isUploading || isSending || confirmingSend || attachments.length >= 5} onPress={() => void chooseMedia(true)} />}
+          <WorkflowButton label={showMedia ? 'Hide customer uploads' : 'Customer uploads'} onPress={() => setShowMedia(value => !value)} />
+        </View>
+        {!recordingAvailable && lead.dealership?.toLowerCase() === 'south morang hyundai' && <Text style={workflowStyles.text}>Set the dealership’s video contact details to enable branded recording.</Text>}
+        {showMedia && mediaLibrary.map(media => <View key={media.id} style={workflowStyles.row}>
+          <Text style={workflowStyles.text}>{media.name}{media.status === 'processing_failed' ? ` · ${media.processing_error || 'Branding failed'}` :
+            media.status && media.status !== 'ready' ? ' · Adding dealership end card…' :
+            media.content_type.startsWith('video/') ? ` · ${media.views ?? 0} views · ${media.reviews ?? 0} reviews` : ''}</Text>
+          {media.status === 'processing_failed' && <WorkflowButton label="Retry branding" onPress={async () => {
+            try {
+              const result = await customerMessageApi.completeMedia(lead._id, media.id);
+              if (result.data) setMediaLibrary(items => items.map(item => item.id === media.id ? result.data! : item));
+            } catch (reason) { setError((reason as Error).message); }
+          }} />}
+          {(!media.status || media.status === 'ready') && <>
+            <WorkflowButton label="Open link" onPress={() => Linking.openURL(media.url).catch(() => setError('Unable to open the attachment.'))} />
+            <WorkflowButton label="Attach" disabled={isSending || isUploading || confirmingSend || attachments.length >= 5 || attachments.some(item => item.id === media.id)} onPress={() => setAttachments(items => [...items, media])} />
+          </>}
+        </View>)}
+      </View>}
       <View style={[workflowStyles.row, { paddingHorizontal: 10, paddingVertical: 6 }]}>
         <WorkflowButton label={aiEnabled || resumeHours ? 'Pause AI drafts' : 'Enable AI drafts'} disabled={isSending || drafting || confirmingSend}
           onPress={() => setDraftPolicy(!(aiEnabled || resumeHours))} />
@@ -272,7 +322,7 @@ export function CustomerMessages({ lead, disabled = false }: CustomerMessagesPro
       {/* Composer Input */}
       {phone ? (
         <View style={styles.composer}>
-          {mediaAvailable && <TouchableOpacity accessibilityLabel="Attach photo or video" disabled={disabled || isUploading || isSending || attachments.length >= 5 || confirmingSend} onPress={chooseMedia}>
+          {mediaAvailable && <TouchableOpacity accessibilityLabel="Attach photo or video" disabled={disabled || isUploading || isSending || attachments.length >= 5 || confirmingSend} onPress={() => void chooseMedia()}>
             {isUploading ? <ActivityIndicator /> : <Paperclip size={18} color={colors.textSecondary} />}
           </TouchableOpacity>}
           <TextInput
