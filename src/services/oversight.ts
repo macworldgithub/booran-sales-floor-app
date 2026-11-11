@@ -11,6 +11,7 @@ export type DailyMember = {
 };
 export type DailyOversight = {
   date: string; timezone: string; refreshedAt: string; members: DailyMember[]; unassigned: Lead[]; losses: Lead[];
+  unassignedPagination?: { page: number; limit: number; total: number; totalPages: number };
   summary: { tasksCompleted: number; tasksTotal: number; tasksRemaining: number; overdueTasks: number; overdueProspects: number; carryOvers: number; unactioned: number; unassigned: number; pendingLosses: number; lossesApprovedToday: number; videosRemaining: number; mtdSales: number; allGreen: boolean };
   report: { available: boolean; scheduledTime: string; description: string; generatedAt: string };
 };
@@ -21,7 +22,7 @@ export type IntakeLead = { externalId: string; dealership: string; name: string;
 const leadPath = (id: string) => `/leads/${encodeURIComponent(id)}`;
 const post = (value: unknown) => ({ method: 'POST', body: JSON.stringify(value) });
 export const oversightApi = {
-  daily: (rooftop: string, signal?: AbortSignal) => fetchApi<DailyOversight>(`/daily-oversight?rooftop=${encodeURIComponent(rooftop)}`, { signal }),
+  daily: (rooftop: string, signal?: AbortSignal, queuePage = 0) => fetchApi<DailyOversight>(`/daily-oversight?rooftop=${encodeURIComponent(rooftop)}&queuePage=${queuePage + 1}`, { signal }),
   policy: (id: string) => fetchApi<FollowupPolicy & { afterContact: FollowupPolicy }>(`${leadPath(id)}/follow-up-policy`),
   nextAction: (id: string, data: { title: string; note: string; dueAt: string }) => fetchApi<Lead>(`${leadPath(id)}/next-action`, post(data)),
   requestLoss: (id: string, reason: string) => fetchApi<Lead>(`${leadPath(id)}/loss-request`, post({ reason })),

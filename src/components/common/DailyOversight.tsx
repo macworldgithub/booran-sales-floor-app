@@ -30,7 +30,7 @@ export function DailyOversight({ onOpenLead, refreshKey = false }: { onOpenLead:
     const load = async () => {
       if (pending) return;
       pending = true;
-      try { const result = await oversightApi.daily(selectedRooftop, controller.signal); if (active && result.data) { setStored({ site: selectedRooftop, data: result.data }); setError(''); } }
+      try { const result = await oversightApi.daily(selectedRooftop, controller.signal, queuePage); if (active && result.data) { setStored({ site: selectedRooftop, data: result.data }); if (result.data.unassignedPagination) setQueuePage(page => Math.min(page, result.data!.unassignedPagination!.totalPages - 1)); setError(''); } }
       catch (reason) { if (active) setError((reason as Error).message); }
       finally { pending = false; }
     };
@@ -38,10 +38,10 @@ export function DailyOversight({ onOpenLead, refreshKey = false }: { onOpenLead:
     const timer = setInterval(() => { if (AppState.currentState === 'active') void load(); }, 20000);
     const subscription = AppState.addEventListener('change', state => { if (state === 'active') void load(); });
     return () => { active = false; controller.abort(); clearInterval(timer); subscription.remove(); };
-  }, [selectedRooftop, revision, refreshKey]);
+  }, [selectedRooftop, revision, refreshKey, queuePage]);
   const run = async (action: () => Promise<void>) => { setBusy(true); setError(''); try { await action(); refresh(); } catch (reason) { setError((reason as Error).message); } finally { setBusy(false); } };
   const open = (id: string) => run(async () => { const result = await leadApi.getLead(id); if (result.data) onOpenLead(result.data); });
-  const pages = Math.max(1, Math.ceil((data?.unassigned.length || 0) / 5)); const page = Math.min(queuePage, pages - 1);
+  const pages = data?.unassignedPagination?.totalPages ?? Math.max(1, Math.ceil((data?.unassigned.length || 0) / 5)); const page = Math.min(queuePage, pages - 1);
   return <View style={styles.card}>
     <Text style={styles.title}>{manager ? 'Daily manager overview' : 'My daily overview'}</Text>
     <Text style={styles.text}>{data?.date} · Melbourne time · Updates every 20 seconds{data ? ` · ${when(data.refreshedAt)}` : ''}</Text>
@@ -78,8 +78,8 @@ export function DailyOversight({ onOpenLead, refreshKey = false }: { onOpenLead:
       </View>)}
       <Text style={styles.text}>Soft North Star: approximately 20 new + used sales per person per month. No enforced target. Untouched prospects and unfinished tasks carry forward automatically.</Text>
       {manager && <View style={styles.group}>
-        <WorkflowButton label={`Unassigned / new leads (${data.unassigned.length})${queueOpen ? ' · Hide' : ''}`} onPress={() => setQueueOpen(!queueOpen)} />
-        {queueOpen && <>{!data.unassigned.length && <Text style={styles.text}>No leads awaiting allocation.</Text>}{data.unassigned.slice(page * 5, page * 5 + 5).map(lead => <View style={styles.customer} key={lead._id}><WorkflowButton label={lead.name} onPress={() => onOpenLead(lead)} /><Text style={styles.text}>{lead.source} · {lead.dealership}</Text><Signal value="red" label={lead.overdue ? 'Overdue · awaiting allocation' : 'Awaiting allocation'} />{lead.quick_walk_in && <Text style={styles.text}>{lead.diary_entries?.[0]?.note}</Text>}<LeadAssignment lead={lead} onUpdated={refresh} quick /></View>)}{pages > 1 && <View style={styles.row}><WorkflowButton label="Previous leads" disabled={page === 0} onPress={() => setQueuePage(page - 1)} /><Text>{page + 1}/{pages}</Text><WorkflowButton label="Next leads" disabled={page + 1 === pages} onPress={() => setQueuePage(page + 1)} /></View>}</>}
+        <WorkflowButton label={`Unassigned / new leads (${(data.unassignedPagination?.total ?? data.unassigned.length)})${queueOpen ? ' · Hide' : ''}`} onPress={() => setQueueOpen(!queueOpen)} />
+        {queueOpen && <>{!(data.unassignedPagination?.total ?? data.unassigned.length) && <Text style={styles.text}>No leads awaiting allocation.</Text>}{(data.unassignedPagination ? data.unassigned : data.unassigned.slice(page * 5, page * 5 + 5)).map(lead => <View style={styles.customer} key={lead._id}><WorkflowButton label={lead.name} onPress={() => onOpenLead(lead)} /><Text style={styles.text}>{lead.source} · {lead.dealership}</Text><Signal value="red" label={lead.overdue ? 'Overdue · awaiting allocation' : 'Awaiting allocation'} />{lead.quick_walk_in && <Text style={styles.text}>{lead.diary_entries?.[0]?.note}</Text>}<LeadAssignment lead={lead} onUpdated={refresh} quick /></View>)}{pages > 1 && <View style={styles.row}><WorkflowButton label="Previous leads" disabled={page === 0} onPress={() => setQueuePage(page - 1)} /><Text>{page + 1}/{pages}</Text><WorkflowButton label="Next leads" disabled={page + 1 === pages} onPress={() => setQueuePage(page + 1)} /></View>}</>}
         <WorkflowButton label={`Lost-lead review (${data.losses.length} pending · ${data.summary.lossesApprovedToday} approved today)${lossesOpen ? ' · Hide' : ''}`} onPress={() => setLossesOpen(!lossesOpen)} />
         {lossesOpen && <>{!data.losses.length && <Text style={styles.text}>No losses awaiting approval.</Text>}{data.losses.map(lead => <View style={styles.customer} key={lead._id}><WorkflowButton label={`${lead.name} · ${lead.owner_name}`} onPress={() => onOpenLead(lead)} /><LeadProcess lead={lead} onUpdated={refresh} /></View>)}</>}
         <LeadIntake key={selectedRooftop} onImported={lead => { refresh(); onOpenLead(lead); }} />
